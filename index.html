@@ -1,0 +1,1493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ODL Academic Ops Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #ffffff;
+        --surface: #ffffff;
+        --surface-2: #f6f8fb;
+        --ink: #101418;
+        --muted: #5f6b7a;
+        --accent: #1d4ed8;
+        --accent-2: #0f766e;
+        --border: rgba(16, 20, 24, 0.12);
+        --shadow: 0 12px 28px rgba(16, 20, 24, 0.08);
+        --radius: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        min-height: 100vh;
+      }
+
+      .shell {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+        position: relative;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+      }
+
+      .title {
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-size: clamp(26px, 3.4vw, 36px);
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        margin: 6px 0 0;
+        font-size: 14px;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid transparent;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        padding: 10px 18px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(29, 78, 216, 0.2);
+      }
+
+      .btn.secondary {
+        background: #fff;
+        border-color: var(--border);
+        color: var(--ink);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 8px 0 20px;
+      }
+
+      .tab-btn {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--ink);
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+
+      .tab-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 16px rgba(16, 20, 24, 0.12);
+      }
+
+      .tab-btn.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: block;
+      }
+
+      .result-subtab-panel {
+        display: none;
+      }
+
+      .result-subtab-panel.active {
+        display: block;
+      }
+
+      .card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 18px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
+
+      .stat {
+        grid-column: span 3;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 140px;
+      }
+
+      .stat h3 {
+        margin: 0;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .stat .value {
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-size: clamp(26px, 3vw, 36px);
+        font-weight: 700;
+      }
+
+      .stat .trend {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .import-card {
+        grid-column: span 4;
+      }
+
+      .table-card {
+        grid-column: span 8;
+      }
+
+      .card-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .card-title h2 {
+        font-size: 18px;
+        margin: 0;
+      }
+
+      .chip {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .import-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      input[type="file"] {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        flex: 1 1 220px;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 8px 0 14px;
+      }
+
+      pre {
+        background: var(--surface-2);
+        padding: 12px;
+        border-radius: 12px;
+        overflow: auto;
+        min-height: 120px;
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .slip-table {
+        table-layout: fixed;
+        width: 100%;
+      }
+
+      .slip-table td,
+      .slip-table th {
+        vertical-align: top;
+      }
+
+      .slip-table th {
+        white-space: normal;
+        line-height: 1.2;
+      }
+
+      .slip-table td {
+        word-break: break-word;
+      }
+
+      th,
+      td {
+        padding: 10px 8px;
+        text-align: left;
+        border-bottom: 1px solid rgba(16, 20, 24, 0.08);
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      tfoot td {
+        font-size: 11px;
+        color: var(--muted);
+        border-bottom: none;
+        padding-top: 6px;
+      }
+
+      tfoot td strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      .course-card {
+        grid-column: span 12;
+      }
+
+      .course-stat {
+        grid-column: span 6;
+        min-height: 120px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .field {
+        grid-column: span 3;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .field-wide {
+        grid-column: span 6;
+      }
+
+      .field label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-family: inherit;
+        background: #fff;
+      }
+
+      .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn.small {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .table-actions {
+        white-space: nowrap;
+      }
+
+      .table-actions .btn + .btn {
+        margin-left: 8px;
+      }
+
+      .meter {
+        height: 8px;
+        background: #eef1f6;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .meter > span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      }
+
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .filter-row .field {
+        min-width: 200px;
+      }
+
+      .result-table td.fail,
+      .result-table .remark,
+      .fail,
+      .remark {
+        color: #b42318;
+        font-weight: 600;
+      }
+
+      .link-button {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .link-button:hover {
+        text-decoration: underline;
+      }
+
+      .mark-input {
+        width: 86px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .mark-edit-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .mark-edit-row {
+        grid-column: span 6;
+        display: grid;
+        gap: 6px;
+      }
+
+      .mark-edit-row span {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .mark-edit-row strong {
+        font-size: 14px;
+      }
+
+      .mark-edit-input {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-family: inherit;
+        background: #fff;
+      }
+
+      .mark-edit-warning {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #b42318;
+      }
+
+      .mark-edit-verify {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .enrollment-course-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        padding: 2px;
+      }
+
+      .enrollment-course-item {
+        appearance: none;
+        width: 100%;
+        text-align: left;
+        display: grid;
+        gap: 4px;
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .enrollment-course-item.selected {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .enrollment-course-item strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .enrollment-course-item span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .enrollment-course-item.selected span {
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .enrollment-layout {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .enrollment-list-card {
+        grid-column: span 12;
+      }
+
+
+      .slip {
+        background: var(--surface-2);
+        border-radius: var(--radius);
+        padding: 20px;
+        border: 1px solid var(--border);
+      }
+
+      .slip-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .slip-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .slip-brand {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .slip-brand strong {
+        font-size: 16px;
+        color: var(--ink);
+      }
+
+      .slip-title {
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        font-size: 22px;
+        margin: 0;
+      }
+
+      .slip-meta {
+        display: grid;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .slip-meta table {
+        font-size: 13px;
+        width: auto;
+      }
+
+      .slip-meta td {
+        border-bottom: none;
+        padding: 4px 10px 4px 0;
+        color: var(--ink);
+      }
+
+      .slip-meta td span {
+        color: var(--muted);
+      }
+
+      .slip-section {
+        margin-top: 18px;
+      }
+
+      .slip-section h4 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .slip-disclaimer {
+        margin-top: 16px;
+        font-size: 12px;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+      }
+
+      .slip-disclaimer strong {
+        color: var(--ink);
+      }
+
+      .gpa-tag {
+        background: #fff;
+        border: 1px solid var(--border);
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--ink);
+      }
+
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(28, 27, 31, 0.6);
+        z-index: 1000;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-card {
+        width: min(960px, 96vw);
+        max-height: 90vh;
+        overflow: auto;
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+      }
+
+      .modal-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 12mm;
+        }
+
+        body {
+          background: #fff;
+          margin: 0;
+          font-size: 11px;
+        }
+
+        .shell,
+        .tabs,
+        header,
+        #panel-dashboard,
+        #panel-data,
+        #panel-courses,
+        #panel-enrollment,
+        #panel-results,
+        #courseCoverageModal {
+          display: none !important;
+        }
+
+        #resultSlipModal {
+          position: static;
+          display: block;
+          padding: 0;
+          background: none;
+        }
+
+        #resultSlipModal .modal-card {
+          width: 100%;
+          max-height: none;
+          overflow: visible;
+          box-shadow: none;
+          border: none;
+          padding: 0;
+        }
+
+        #resultSlip {
+          position: static;
+          width: 100%;
+        }
+
+        .slip {
+          box-shadow: none;
+          border: none;
+          background: #fff;
+          padding: 0;
+        }
+
+        .slip-title {
+          font-size: 18px;
+        }
+
+        .slip-brand {
+          font-size: 11px;
+        }
+
+        .slip-brand strong {
+          font-size: 13px;
+        }
+
+        .gpa-tag {
+          font-size: 11px;
+        }
+
+        .slip-actions {
+          display: none;
+        }
+
+        .slip-section {
+          margin-top: 10px;
+        }
+
+        .slip-disclaimer {
+          font-size: 10px;
+        }
+
+        table {
+          font-size: 11px;
+        }
+
+        th,
+        td {
+          padding: 6px 6px;
+        }
+
+        table {
+          page-break-inside: auto;
+        }
+
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+
+        .slip-section {
+          page-break-inside: auto;
+        }
+      }
+
+      .empty {
+        padding: 28px;
+        text-align: center;
+        color: var(--muted);
+        background: var(--surface-2);
+        border-radius: 16px;
+        border: 1px dashed var(--border);
+      }
+
+      .fade-up {
+        animation: fadeUp 0.6s ease both;
+      }
+
+      .delay-1 { animation-delay: 0.05s; }
+      .delay-2 { animation-delay: 0.1s; }
+      .delay-3 { animation-delay: 0.15s; }
+      .delay-4 { animation-delay: 0.2s; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 1024px) {
+        .stat { grid-column: span 6; }
+        .import-card, .table-card { grid-column: span 12; }
+        .enrollment-list-card { grid-column: span 12; }
+        .enrollment-course-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .field, .field-wide { grid-column: span 12; }
+      }
+
+      @media (max-width: 720px) {
+        header { align-items: flex-start; }
+        .stat { grid-column: span 12; }
+        .enrollment-course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+
+    <!-- CSV parser (client-side). Keep it simple for MVP -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="fade-up">
+        <div>
+          <h1 class="title">ODL Academic Ops</h1>
+          <p class="subtitle">Dashboard snapshot for students, courses, and engagement coverage.</p>
+        </div>
+        <div class="header-actions">
+          <span class="chip" id="lastUpdated">Last updated: --</span>
+          <button class="btn secondary" id="btnRefresh">Refresh stats</button>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="ODL modules">
+        <button class="tab-btn active" type="button" role="tab" aria-selected="true" data-tab="dashboard">
+          Dashboard
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="data">
+          Data
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="courses">
+          Courses
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="results">
+          Results
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="enrollment">
+          Enrollment
+        </button>
+      </nav>
+
+      <section class="tab-panel active" id="panel-dashboard" role="tabpanel">
+        <div class="grid">
+          <div class="card stat fade-up delay-1">
+            <h3>Total Students</h3>
+            <div class="value" id="totalStudents">--</div>
+            <div class="trend">Indexed in the current database</div>
+          </div>
+          <div class="card stat fade-up delay-2">
+            <h3>Total Courses</h3>
+            <div class="value" id="totalCourses">--</div>
+            <div class="trend">Unique courses in catalog</div>
+          </div>
+          <div class="card stat fade-up delay-3">
+            <h3>Active Courses</h3>
+            <div class="value" id="activeCourses">--</div>
+            <div class="trend">Courses with recorded results</div>
+          </div>
+          <div class="card stat fade-up delay-4">
+            <h3>Total Results</h3>
+            <div class="value" id="totalResults">--</div>
+            <div class="trend">Student course outcomes</div>
+          </div>
+
+          <div class="card stat fade-up delay-1">
+            <h3>Active Students</h3>
+            <div class="value" id="activeStudents">--</div>
+            <div class="trend">Students with results</div>
+          </div>
+          <div class="card stat fade-up delay-2">
+            <h3>Students w/ Failures</h3>
+            <div class="value" id="studentsWithFailures">--</div>
+            <div class="trend">Any failed course</div>
+            <button class="btn secondary small" type="button" id="btnViewFailures">View list</button>
+          </div>
+          <div class="card stat fade-up delay-3">
+            <h3>Incomplete Student Info</h3>
+            <div class="value" id="studentsIncomplete">--</div>
+            <div class="trend">Missing IC or ID</div>
+            <button class="btn secondary small" type="button" id="btnViewIncomplete">View list</button>
+          </div>
+          <div class="card stat fade-up delay-4">
+            <h3>Students w/ CGPA &lt; 2.00</h3>
+            <div class="value" id="studentsLowCgpa">--</div>
+            <div class="trend">Calculated from results</div>
+            <button class="btn secondary small" type="button" id="btnViewLowCgpa">View list</button>
+          </div>
+          <div class="card stat fade-up delay-1">
+            <h3>Result Issues</h3>
+            <div class="value" id="studentsResultIssues">--</div>
+            <div class="trend">Repeated course or missing mark</div>
+            <button class="btn secondary small" type="button" id="btnViewResultIssues">View list</button>
+          </div>
+          <div class="card stat fade-up delay-3">
+            <h3>Avg Results / Student</h3>
+            <div class="value" id="avgResultsPerStudent">--</div>
+            <div class="trend">Across all students</div>
+          </div>
+
+          <div class="card table-card fade-up delay-3">
+            <div class="card-title">
+              <h2>Overview</h2>
+              <span class="chip">Key metrics</span>
+            </div>
+            <div class="muted">
+              Use the Courses tab to review coverage and student lists per course.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-courses" role="tabpanel">
+        <div class="grid">
+          <div class="card stat course-stat fade-up delay-2">
+            <h3>Total Courses</h3>
+            <div class="value" id="courseTotalCount">--</div>
+            <div class="trend">Courses in the catalog</div>
+          </div>
+          <div class="card stat course-stat fade-up delay-3">
+            <h3>Total Credits</h3>
+            <div class="value" id="courseTotalCredits">--</div>
+            <div class="trend">Sum of all course credits</div>
+          </div>
+
+          <div class="card course-card fade-up delay-4">
+            <div class="card-title">
+              <h2>Course Catalog</h2>
+              <span class="chip">Add & Update</span>
+            </div>
+            <form id="courseForm">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="courseCode">Course Code</label>
+                  <input id="courseCode" name="courseCode" type="text" placeholder="e.g. MPU3123" required />
+                </div>
+                <div class="field field-wide">
+                  <label for="courseTitle">Title</label>
+                  <input id="courseTitle" name="courseTitle" type="text" placeholder="Course title" />
+                </div>
+                <div class="field">
+                  <label for="courseCredits">Credits</label>
+                  <input id="courseCredits" name="courseCredits" type="number" min="0" step="1" placeholder="0" />
+                </div>
+                <div class="field">
+                  <label for="courseMPU">MPU Course</label>
+                  <select id="courseMPU" name="courseMPU">
+                    <option value="">Unknown</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button class="btn" type="submit" id="btnCourseSave">Save Course</button>
+                <button class="btn secondary" type="button" id="btnCourseReset">Reset</button>
+                <span class="muted" id="courseFormHint">Use the same course code to update an existing course.</span>
+              </div>
+            </form>
+
+            <div id="courseListEmpty" class="empty" style="margin-top: 16px;">
+              No courses yet. Add a course or import a catalog.
+            </div>
+            <table id="courseListTable" style="display: none; margin-top: 16px;">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Title</th>
+                  <th>Coverage</th>
+                  <th>Credits</th>
+                  <th>MPU</th>
+                  <th>Action</th>
+                  <th>View List</th>
+                </tr>
+              </thead>
+              <tbody id="courseListBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-data" role="tabpanel">
+        <div class="grid">
+          <div class="card import-card fade-up delay-2" style="grid-column: span 6;">
+            <div class="card-title">
+              <h2>Import Results CSV</h2>
+              <span class="chip">CSV</span>
+            </div>
+            <div class="import-row">
+              <input type="file" id="csvFileImports" accept=".csv" />
+              <button class="btn" id="btnImportImports">Import</button>
+            </div>
+            <p class="muted">
+              Expected columns include: ID, Name, IC, Intake, CourseCode, Title, Credits, Session,
+              Semester, Mark, Letter, Point, GradePoints, PassedCourse, CreditsEarned.
+            </p>
+            <h3 class="card-title" style="margin-top: 10px;"><span>Log</span></h3>
+            <pre id="logImports"></pre>
+          </div>
+
+          <div class="card fade-up delay-2" style="grid-column: span 6;">
+            <div class="card-title">
+              <h2>Upload New Results</h2>
+              <span class="chip">CSV</span>
+            </div>
+            <div class="import-row">
+              <select id="newResultYear" aria-label="Session year">
+                <option value="">Year</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+              </select>
+              <select id="newResultMonth" aria-label="Session month">
+                <option value="">Month</option>
+                <option value="02">02</option>
+                <option value="09">09</option>
+              </select>
+              <select id="newResultCourse" aria-label="Course">
+                <option value="">Course</option>
+              </select>
+              <input type="file" id="newResultFile" accept=".csv" />
+              <button class="btn secondary" id="btnPreviewResults">Preview</button>
+              <button class="btn" id="btnUploadNewResults">Upload</button>
+            </div>
+            <p class="muted">
+              Expected columns: Student ID, Full Name, Mark. Session format is YYYY-MM (month 02 or 09).
+            </p>
+            <div class="muted">
+              Example template: <a href="./example.csv" download>Download example.csv</a>
+            </div>
+            <h3 class="card-title" style="margin-top: 10px;"><span>Upload Log</span></h3>
+            <pre id="newResultLog"></pre>
+          </div>
+
+          <div class="card fade-up delay-2" style="grid-column: span 12;">
+            <div class="card-title">
+              <h2>Backup &amp; Restore</h2>
+              <span class="chip">CSV</span>
+            </div>
+            <div class="import-row">
+              <button class="btn" id="btnBackupDownload">Download Backup CSV</button>
+            </div>
+            <p class="muted">
+              This backup uses the same columns as Import Results CSV.
+            </p>
+            <div class="import-row">
+              <input type="file" id="backupFile" accept=".csv" />
+              <button class="btn secondary" id="btnBackupImport">Restore from CSV</button>
+            </div>
+            <p class="muted">
+              You can also restore via the Data tab using the same CSV.
+            </p>
+            <h3 class="card-title" style="margin-top: 10px;"><span>Backup Log</span></h3>
+            <pre id="backupLog"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-results" role="tabpanel">
+        <div class="tabs" role="tablist" aria-label="Results subtabs">
+          <button class="tab-btn active result-subtab-btn" type="button" role="tab" aria-selected="true" data-subtab="overview">
+            Overview
+          </button>
+          <button class="tab-btn result-subtab-btn" type="button" role="tab" aria-selected="false" data-subtab="listing">
+            Result Listing
+          </button>
+          <button class="tab-btn result-subtab-btn" type="button" role="tab" aria-selected="false" data-subtab="issues">
+            Student Issues
+          </button>
+        </div>
+
+        <div class="result-subtab-panel active" id="result-subtab-overview" role="tabpanel">
+          <div class="results-grid">
+            <div class="card stat fade-up delay-1">
+              <h3>Total Results</h3>
+              <div class="value" id="resultTotal">--</div>
+              <div class="trend">Records for current filters</div>
+            </div>
+            <div class="card stat fade-up delay-2">
+              <h3>Pass Rate</h3>
+              <div class="value" id="resultPassRate">--</div>
+              <div class="trend">Based on passed courses</div>
+            </div>
+            <div class="card stat fade-up delay-3">
+              <h3>Avg Mark</h3>
+              <div class="value" id="resultAvgMark">--</div>
+              <div class="trend">Across filtered results</div>
+            </div>
+            <div class="card stat fade-up delay-4">
+              <h3>Students</h3>
+              <div class="value" id="resultStudents">--</div>
+              <div class="trend">Distinct in selection</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-subtab-panel" id="result-subtab-listing" role="tabpanel">
+          <div class="results-grid">
+            <div class="card fade-up delay-2" style="grid-column: span 12;">
+              <div class="card-title">
+                <h2>Results Filters</h2>
+                <span class="chip">Intake + Search</span>
+              </div>
+              <div class="filter-row">
+                <div class="field">
+                  <label for="resultViewMode">View</label>
+                  <select id="resultViewMode">
+                    <option value="students">By Student</option>
+                    <option value="courses">By Course</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="resultSessionSelect">Intake</label>
+                  <select id="resultSessionSelect">
+                    <option value="">All intakes</option>
+                  </select>
+                </div>
+                <div class="field field-wide">
+                  <label for="resultSearch">Search</label>
+                  <input id="resultSearch" type="text" placeholder="Search by student name or ID" />
+                </div>
+              </div>
+            </div>
+
+            <div class="card fade-up delay-3" style="grid-column: span 12;">
+              <div class="card-title">
+                <h2>Result Listing</h2>
+                <span class="chip">Filtered</span>
+              </div>
+              <div class="form-actions" id="courseDetailHeader" style="display: none; margin-bottom: 12px;">
+                <button class="btn secondary small" type="button" id="btnBackToCourseList">Back to course list</button>
+                <span class="chip" id="courseDetailTitle">Course</span>
+              </div>
+              <div id="courseDetailStats" class="grid" style="display: none; margin-bottom: 12px;">
+                <div class="card stat">
+                  <h3>Course Records</h3>
+                  <div class="value" id="courseDetailRecords">--</div>
+                  <div class="trend">Total results for course</div>
+                </div>
+                <div class="card stat">
+                  <h3>Pass Rate</h3>
+                  <div class="value" id="courseDetailPassRate">--</div>
+                  <div class="trend">Based on passed courses</div>
+                </div>
+                <div class="card stat">
+                  <h3>Avg Mark</h3>
+                  <div class="value" id="courseDetailAvgMark">--</div>
+                  <div class="trend">Across course results</div>
+                </div>
+                <div class="card stat">
+                  <h3>Unique Students</h3>
+                  <div class="value" id="courseDetailStudents">--</div>
+                  <div class="trend">In this course</div>
+                </div>
+              </div>
+              <div id="resultTableEmpty" class="empty">No results yet. Import results to begin.</div>
+              <table id="resultTable" class="result-table" style="display: none;">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Course</th>
+                    <th>Session</th>
+                    <th>Semester</th>
+                    <th>Mark</th>
+                    <th>Letter</th>
+                    <th>Point</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="resultTableBody"></tbody>
+              </table>
+              <div class="form-actions" id="resultPager" style="display: none; margin-top: 12px;">
+                <button class="btn secondary small" type="button" id="btnPrevPage">Previous</button>
+                <span class="muted" id="resultPageMeta">Page 1 of 1</span>
+                <button class="btn secondary small" type="button" id="btnNextPage">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-subtab-panel" id="result-subtab-issues" role="tabpanel">
+          <div class="results-grid">
+            <div class="card fade-up delay-4" style="grid-column: span 12;">
+              <div class="card-title">
+                <h2>Student Issues</h2>
+                <span class="chip">Review &amp; Resolve</span>
+              </div>
+              <div class="filter-row">
+                <div class="field">
+                  <label for="issueTypeSelect">Issue Type</label>
+                  <select id="issueTypeSelect">
+                    <option value="failures">Students with failures</option>
+                    <option value="incomplete">Incomplete student info</option>
+                    <option value="lowCgpa">CGPA below 2.00</option>
+                    <option value="resultIssues">Result issues (repeated course / missing mark)</option>
+                  </select>
+                </div>
+                <div class="field field-wide">
+                  <label for="issueSearch">Search</label>
+                  <input id="issueSearch" type="text" placeholder="Search by student name or ID" />
+                </div>
+              </div>
+              <div class="card-title" style="margin-top: 16px;">
+                <h2 id="issueListTitle">Student List</h2>
+                <span class="chip" id="issueListCount">0</span>
+              </div>
+              <div id="issueListEmpty" class="empty">No students found.</div>
+              <table id="issueListTable" style="display: none;">
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>IC</th>
+                    <th>Intake</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="issueListBody"></tbody>
+              </table>
+              <div class="form-actions" id="issuePager" style="display: none; margin-top: 12px;">
+                <button class="btn secondary small" type="button" id="btnIssuePrev">Previous</button>
+                <span class="muted" id="issuePageMeta">Page 1 of 1</span>
+                <button class="btn secondary small" type="button" id="btnIssueNext">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-enrollment" role="tabpanel">
+        <div class="grid">
+          <div class="card fade-up delay-1" style="grid-column: span 12;">
+            <div class="card-title">
+              <h2>Next Semester Offerings</h2>
+              <span class="chip" id="enrollmentSelectedCount">0 selected</span>
+            </div>
+            <p class="muted">
+              Select offered courses. Each student slip will include only courses not yet passed.
+              Remarks: <strong>New</strong> (never attempted), <strong>Repeat</strong> (attempted but not passed).
+            </p>
+            <div class="import-row">
+              <div id="enrollmentCourseGrid" class="enrollment-course-grid"></div>
+            </div>
+            <div class="muted">Minimum 1 and maximum 15 offered courses per build.</div>
+            <div class="form-actions">
+              <button class="btn secondary small" type="button" id="btnEnrollmentSelectAll">Select all</button>
+              <button class="btn secondary small" type="button" id="btnEnrollmentClearAll">Clear</button>
+              <button class="btn small" type="button" id="btnEnrollmentBuild">Build Slips</button>
+            </div>
+          </div>
+
+          <div class="enrollment-layout" style="grid-column: span 12;">
+            <div class="card enrollment-list-card fade-up delay-2">
+              <div class="card-title">
+                <h2>Student Enrollment List</h2>
+                <span class="chip" id="enrollmentStudentCount">0</span>
+              </div>
+              <div class="filter-row">
+                <div class="field field-wide">
+                  <label for="enrollmentSearch">Search</label>
+                  <input id="enrollmentSearch" type="text" placeholder="Search by student name or ID" />
+                </div>
+              </div>
+              <div id="enrollmentListEmpty" class="empty" style="margin-top: 12px;">No slips generated yet.</div>
+              <table id="enrollmentListTable" style="display: none;">
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Intake</th>
+                    <th>Current Semester</th>
+                    <th>Progress (90 Credits)</th>
+                    <th>To Enroll</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="enrollmentListBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal" id="resultSlipModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="slip-actions">
+          <button class="btn secondary" type="button" id="btnCloseSlip">Close</button>
+          <button class="btn" type="button" id="btnPrintSlip">Print Slip</button>
+        </div>
+        <div id="resultSlip" class="slip">
+          <div class="slip-header">
+            <div>
+              <h3 class="slip-title">Academic Result Slip</h3>
+              <div class="slip-brand">
+                <strong id="slipInstitutionName">Centre of Digital and Flexible Learning</strong>
+                <div id="slipInstitutionUnit">Innovative University College</div>
+                <div id="slipInstitutionAddress">
+                  Unit GL35, Main Lobby Block C, Kelana Square, Jalan SS 7/26,
+                  47301 Petaling Jaya, Selangor
+                </div>
+              </div>
+              <div class="slip-meta" id="slipStudentMeta"></div>
+            </div>
+            <div class="gpa-tag">CGPA: <span id="slipCGPA">--</span></div>
+          </div>
+          <div id="slipTerms"></div>
+          <div class="slip-disclaimer">
+            <strong>Disclaimer:</strong> This statement is not an official transcript. Any discrepancies
+            should be reported to dbaodl.exam@innovative.edu.my.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="enrollmentSlipModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Enrollment Slip</h3>
+            <div class="muted">Generated from selected offered courses.</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnCloseEnrollmentSlip">Close</button>
+          </div>
+        </div>
+        <div class="card-title">
+          <h2>Courses To Enroll</h2>
+          <span class="chip" id="enrollmentSlipCount">0 course(s)</span>
+        </div>
+        <div class="muted" id="enrollmentSlipStudentMeta">--</div>
+        <table style="margin-top: 10px;">
+          <thead>
+            <tr>
+              <th>Course Code</th>
+              <th>Title</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody id="enrollmentSlipBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal" id="courseCoverageModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Course Coverage Detail</h3>
+            <div class="muted" id="coverageCourseMeta">--</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnExportCoverage">Export CSV</button>
+            <button class="btn secondary" type="button" id="btnCloseCoverage">Close</button>
+          </div>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px;">
+          <div class="card" style="grid-column: span 6;">
+            <div class="card-title">
+              <h2>Taken</h2>
+              <span class="chip" id="coverageTakenCount">0</span>
+            </div>
+            <div id="coverageTakenList" class="muted"></div>
+          </div>
+          <div class="card" style="grid-column: span 6;">
+            <div class="card-title">
+              <h2>Not Taken</h2>
+              <span class="chip" id="coverageNotTakenCount">0</span>
+            </div>
+            <div id="coverageNotTakenList" class="muted"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="resultPreviewModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Verify Upload</h3>
+            <div class="muted">Select students to update</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnClosePreview">Close</button>
+            <button class="btn secondary" type="button" id="btnSelectNonePreview">Select None</button>
+            <button class="btn secondary" type="button" id="btnSelectAllPreview">Select All</button>
+            <button class="btn" type="button" id="btnConfirmPreview">Confirm Update</button>
+          </div>
+        </div>
+        <div class="card-title">
+          <h2>Students Affected</h2>
+          <span class="chip" id="resultPreviewCount">0</span>
+        </div>
+        <div id="resultPreviewEmpty" class="empty">No students detected.</div>
+        <table id="resultPreviewTable" style="display: none;">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>New Rows</th>
+            </tr>
+          </thead>
+          <tbody id="resultPreviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal" id="studentEditModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Edit Student</h3>
+            <div class="muted">Student ID cannot be changed.</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnCloseStudentEdit">Close</button>
+            <button class="btn" type="button" id="btnSaveStudentEdit">Save</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="editStudentId">Student ID</label>
+            <input id="editStudentId" type="text" disabled />
+          </div>
+          <div class="field field-wide">
+            <label for="editStudentName">Name</label>
+            <input id="editStudentName" type="text" />
+          </div>
+          <div class="field">
+            <label for="editStudentIc">IC</label>
+            <input id="editStudentIc" type="text" />
+          </div>
+          <div class="field">
+            <label for="editStudentIntake">Intake</label>
+            <input id="editStudentIntake" type="text" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="markEditModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Edit Mark</h3>
+            <div class="muted">Review the computed grade before saving.</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnCloseMarkEdit">Close</button>
+            <button class="btn" type="button" id="btnConfirmMarkEdit" disabled>Confirm Save</button>
+          </div>
+        </div>
+        <div class="mark-edit-grid">
+          <div class="mark-edit-row">
+            <span>Student</span>
+            <strong id="markEditStudent">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Course</span>
+            <strong id="markEditCourse">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Session</span>
+            <strong id="markEditSession">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Semester</span>
+            <strong id="markEditSemester">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Current Mark</span>
+            <strong id="markEditCurrent">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>New Mark</span>
+            <input id="markEditInput" class="mark-edit-input" type="number" min="0" max="100" step="0.01" />
+          </div>
+          <div class="mark-edit-row">
+            <span>Letter</span>
+            <strong id="markEditLetter">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Point</span>
+            <strong id="markEditPoint">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Status</span>
+            <strong id="markEditStatus">--</strong>
+          </div>
+        </div>
+        <div class="mark-edit-warning" id="markEditWarning" style="display: none;"></div>
+        <label class="mark-edit-verify">
+          <input type="checkbox" id="markEditVerify" />
+          I verify this mark is correct before saving.
+        </label>
+      </div>
+    </div>
+
+
+
+    <script type="module" src="./app/main.js"></script>
+  </body>
+</html>
