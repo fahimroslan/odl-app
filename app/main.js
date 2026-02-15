@@ -1,9 +1,11 @@
 // app/main.js
 import { deleteCourse, listCourses, normalizeCourseCode, upsertCourse } from "./modules/course.js";
 import { initImports } from "./modules/imports-ui.js";
+import { initStudentImport } from "./modules/student-import.js";
 import { computeStudentCgpa } from "./modules/stats.js";
 import { getGradeForMark } from "./modules/results.js";
 import { initBackup } from "./modules/backup.js";
+import { initPortalExport } from "./modules/portal-export.js";
 import { getAllRecords, STORES, upsertMany } from "./db/db.js";
 
 const btnRefresh = document.getElementById("btnRefresh");
@@ -52,6 +54,13 @@ const elCourseFormHint = document.getElementById("courseFormHint");
 const elCourseListBody = document.getElementById("courseListBody");
 const elCourseListTable = document.getElementById("courseListTable");
 const elCourseListEmpty = document.getElementById("courseListEmpty");
+const elStudentListTable = document.getElementById("studentListTable");
+const elStudentListBody = document.getElementById("studentListBody");
+const elStudentListEmpty = document.getElementById("studentListEmpty");
+const btnConfirmResultSlips = document.getElementById("btnConfirmResultSlips");
+const btnConfirmEnrollmentSlips = document.getElementById("btnConfirmEnrollmentSlips");
+const elResultSlipConfirmStatus = document.getElementById("resultSlipConfirmStatus");
+const elEnrollmentSlipConfirmStatus = document.getElementById("enrollmentSlipConfirmStatus");
 const elCourseTotalCount = document.getElementById("courseTotalCount");
 const elCourseTotalCredits = document.getElementById("courseTotalCredits");
 const tabButtons = document.querySelectorAll("[data-tab]");
@@ -111,17 +120,24 @@ const elEnrollmentCourseGrid = document.getElementById("enrollmentCourseGrid");
 const btnEnrollmentSelectAll = document.getElementById("btnEnrollmentSelectAll");
 const btnEnrollmentClearAll = document.getElementById("btnEnrollmentClearAll");
 const btnEnrollmentBuild = document.getElementById("btnEnrollmentBuild");
+const btnEnrollmentBulkPrint = document.getElementById("btnEnrollmentBulkPrint");
 const elEnrollmentSelectedCount = document.getElementById("enrollmentSelectedCount");
 const elEnrollmentSearch = document.getElementById("enrollmentSearch");
 const elEnrollmentStudentCount = document.getElementById("enrollmentStudentCount");
 const elEnrollmentListEmpty = document.getElementById("enrollmentListEmpty");
 const elEnrollmentListTable = document.getElementById("enrollmentListTable");
 const elEnrollmentListBody = document.getElementById("enrollmentListBody");
+const elEnrollmentPager = document.getElementById("enrollmentPager");
+const btnEnrollmentPrev = document.getElementById("btnEnrollmentPrev");
+const btnEnrollmentNext = document.getElementById("btnEnrollmentNext");
+const elEnrollmentPageMeta = document.getElementById("enrollmentPageMeta");
 const elEnrollmentSlipModal = document.getElementById("enrollmentSlipModal");
 const btnCloseEnrollmentSlip = document.getElementById("btnCloseEnrollmentSlip");
+const btnPrintEnrollmentSlip = document.getElementById("btnPrintEnrollmentSlip");
 const elEnrollmentSlipCount = document.getElementById("enrollmentSlipCount");
 const elEnrollmentSlipStudentMeta = document.getElementById("enrollmentSlipStudentMeta");
 const elEnrollmentSlipBody = document.getElementById("enrollmentSlipBody");
+const elEnrollmentBulkLog = document.getElementById("enrollmentBulkLog");
 const numberFmt = new Intl.NumberFormat();
 const percentFmt = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 1 });
 const resultState = {
@@ -152,6 +168,10 @@ const studentIssueLists = {
   lowCgpa: [],
   resultIssues: [],
 };
+const CONFIRM_RESULT_KEY = "odlConfirmResultSlipsAt";
+const CONFIRM_ENROLL_KEY = "odlConfirmEnrollmentSlipsAt";
+const ENROLLMENT_SELECTION_KEY = "odlEnrollmentOfferedCourses";
+const ENROLLMENT_KEYS_KEY = "odlEnrollmentCourseKeys";
 
 const issueTitles = {
   failures: "Students with failures",
@@ -167,8 +187,64 @@ const enrollmentState = {
   slips: [],
   offeredCourseCodes: [],
 };
+const enrollmentPaging = {
+  page: 1,
+  pageSize: 20,
+};
 const ENROLLMENT_MAX_OFFERED = 15;
 const ENROLLMENT_TARGET_CREDITS = 90;
+const enrollmentKeys = new Map();
+
+function setPrintMode(mode) {
+  if (!document?.body) return;
+  document.body.dataset.printMode = mode;
+}
+
+function clearPrintMode() {
+  if (!document?.body) return;
+  delete document.body.dataset.printMode;
+}
+
+window.addEventListener("afterprint", clearPrintMode);
+
+function loadEnrollmentKeys() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ENROLLMENT_KEYS_KEY) || "{}");
+    if (stored && typeof stored === "object" && !Array.isArray(stored)) {
+      for (const [code, key] of Object.entries(stored)) {
+        const normalized = normalizeCourseCode(code);
+        if (!normalized) continue;
+        if (key === null) {
+          enrollmentKeys.set(normalized, null);
+          continue;
+        }
+        const value = String(key ?? "").trim();
+        if (value) enrollmentKeys.set(normalized, value);
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load enrollment keys", e);
+  }
+}
+
+function saveEnrollmentKeys() {
+  try {
+    const payload = {};
+    for (const [code, key] of enrollmentKeys.entries()) {
+      payload[code] = key === null ? null : String(key ?? "");
+    }
+    localStorage.setItem(ENROLLMENT_KEYS_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn("Failed to save enrollment keys", e);
+  }
+}
+
+function getEnrollmentKey(courseCode) {
+  const code = normalizeCourseCode(courseCode);
+  if (!code) return "";
+  if (!enrollmentKeys.size) loadEnrollmentKeys();
+  return enrollmentKeys.has(code) ? enrollmentKeys.get(code) : undefined;
+}
 
 function setActiveResultSubtab(subtabId) {
   resultSubtabButtons.forEach((button) => {
@@ -1222,12 +1298,36 @@ async function refreshResults() {
   populateResultFilters();
   renderResultsView();
   refreshEnrollmentModule();
+  renderStudentList();
 }
 
 function updateEnrollmentSelectedCount() {
   if (!elEnrollmentSelectedCount) return;
   const selectedCount = enrollmentState.offeredCourseCodes.length;
   elEnrollmentSelectedCount.textContent = `${numberFmt.format(selectedCount)} selected (max ${ENROLLMENT_MAX_OFFERED})`;
+}
+
+function persistEnrollmentSelection() {
+  try {
+    const trimmed = (enrollmentState.offeredCourseCodes ?? []).slice(0, ENROLLMENT_MAX_OFFERED);
+    localStorage.setItem(ENROLLMENT_SELECTION_KEY, JSON.stringify(trimmed));
+  } catch (e) {
+    console.warn("Failed to persist enrollment selection", e);
+  }
+}
+
+function loadEnrollmentSelection() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ENROLLMENT_SELECTION_KEY) || "[]");
+    if (Array.isArray(stored)) {
+      enrollmentState.offeredCourseCodes = stored
+        .map((code) => normalizeCourseCode(code))
+        .filter(Boolean)
+        .slice(0, ENROLLMENT_MAX_OFFERED);
+    }
+  } catch (e) {
+    console.warn("Failed to load enrollment selection", e);
+  }
 }
 
 function getSelectedEnrollmentCourseCodes() {
@@ -1239,6 +1339,12 @@ function getSelectedEnrollmentCourseCodes() {
 
 function populateEnrollmentCourseOptions() {
   if (!elEnrollmentCourseGrid) return;
+  if (!enrollmentState.offeredCourseCodes.length) {
+    loadEnrollmentSelection();
+  }
+  if (!enrollmentKeys.size) {
+    loadEnrollmentKeys();
+  }
   const previous = new Set((enrollmentState.offeredCourseCodes ?? []).slice(0, ENROLLMENT_MAX_OFFERED));
   const courses = [...buildCourseMap().values()].sort((a, b) =>
     normalizeCourseCode(a.courseCode ?? "").localeCompare(normalizeCourseCode(b.courseCode ?? ""))
@@ -1253,6 +1359,24 @@ function populateEnrollmentCourseOptions() {
     item.className = "enrollment-course-item";
     item.dataset.courseCode = code;
     if (previous.has(code)) item.classList.add("selected");
+    const keyLabel = document.createElement("span");
+    keyLabel.className = "enrollment-key-label";
+    const keyButton = document.createElement("button");
+    keyButton.type = "button";
+    keyButton.className = "enrollment-key-btn";
+    const updateKeyUi = () => {
+      const currentKey = enrollmentKeys.has(code) ? enrollmentKeys.get(code) : undefined;
+      const keyText = formatEnrollmentKey(currentKey);
+      keyLabel.textContent = `Key: ${keyText === "-" ? "Not set" : keyText}`;
+      keyButton.textContent = currentKey === undefined ? "Set key" : "Edit key";
+    };
+    updateKeyUi();
+    keyButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const currentKey = enrollmentKeys.has(code) ? enrollmentKeys.get(code) : undefined;
+      if (!promptEnrollmentKey(code, currentKey ?? "")) return;
+      updateKeyUi();
+    });
     item.addEventListener("click", () => {
       const isSelected = item.classList.contains("selected");
       if (!isSelected) {
@@ -1267,6 +1391,7 @@ function populateEnrollmentCourseOptions() {
       }
       enrollmentState.offeredCourseCodes = getSelectedEnrollmentCourseCodes();
       updateEnrollmentSelectedCount();
+      persistEnrollmentSelection();
     });
     const content = document.createElement("div");
     const strong = document.createElement("strong");
@@ -1275,12 +1400,15 @@ function populateEnrollmentCourseOptions() {
     span.textContent = String(course.title ?? "").trim() || "Untitled course";
     content.appendChild(strong);
     content.appendChild(span);
+    content.appendChild(keyLabel);
     item.appendChild(content);
+    item.appendChild(keyButton);
     elEnrollmentCourseGrid.appendChild(item);
   }
 
   enrollmentState.offeredCourseCodes = getSelectedEnrollmentCourseCodes();
   updateEnrollmentSelectedCount();
+  persistEnrollmentSelection();
 }
 
 function getEnrollmentStudents() {
@@ -1310,10 +1438,12 @@ function buildEnrollmentSlips(options = {}) {
   const selectedCodes = getSelectedEnrollmentCourseCodes();
   enrollmentState.offeredCourseCodes = selectedCodes;
   updateEnrollmentSelectedCount();
+  persistEnrollmentSelection();
 
   if (!selectedCodes.length) {
     enrollmentState.slips = [];
     activeEnrollmentStudentId = "";
+    enrollmentPaging.page = 1;
     renderEnrollmentList();
     closeEnrollmentSlip();
     if (!suppressMinAlert) {
@@ -1366,6 +1496,7 @@ function buildEnrollmentSlips(options = {}) {
       courses.push({
         courseCode,
         title: String(course?.title ?? "").trim(),
+        enrollKey: getEnrollmentKey(courseCode),
         remark: progress.attempted.has(courseCode) ? "Repeat" : "New",
       });
     }
@@ -1380,6 +1511,7 @@ function buildEnrollmentSlips(options = {}) {
   }
 
   enrollmentState.slips = slips;
+  enrollmentPaging.page = 1;
   renderEnrollmentList();
   if (activeEnrollmentStudentId && !slips.some((slip) => slip.studentId === activeEnrollmentStudentId)) {
     closeEnrollmentSlip();
@@ -1403,6 +1535,7 @@ function renderEnrollmentList() {
     elEnrollmentListBody.textContent = "";
     elEnrollmentListTable.style.display = "none";
     elEnrollmentListEmpty.style.display = "block";
+    if (elEnrollmentPager) elEnrollmentPager.style.display = "none";
     return;
   }
 
@@ -1410,7 +1543,19 @@ function renderEnrollmentList() {
   elEnrollmentListTable.style.display = "table";
   elEnrollmentListBody.textContent = "";
 
-  for (const slip of filtered) {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / enrollmentPaging.pageSize));
+  if (enrollmentPaging.page > totalPages) enrollmentPaging.page = totalPages;
+  const startIndex = (enrollmentPaging.page - 1) * enrollmentPaging.pageSize;
+  const pageRows = filtered.slice(startIndex, startIndex + enrollmentPaging.pageSize);
+
+  if (elEnrollmentPager) elEnrollmentPager.style.display = "flex";
+  if (elEnrollmentPageMeta) {
+    elEnrollmentPageMeta.textContent = `Page ${enrollmentPaging.page} of ${totalPages}`;
+  }
+  if (btnEnrollmentPrev) btnEnrollmentPrev.disabled = enrollmentPaging.page <= 1;
+  if (btnEnrollmentNext) btnEnrollmentNext.disabled = enrollmentPaging.page >= totalPages;
+
+  for (const slip of pageRows) {
     const tr = document.createElement("tr");
 
     const tdId = document.createElement("td");
@@ -1462,6 +1607,13 @@ function renderEnrollmentList() {
 }
 
 function openEnrollmentSlip(studentId) {
+  if (!enrollmentState.slips.length) {
+    buildEnrollmentSlips({ suppressMinAlert: true });
+  }
+  if (!enrollmentState.slips.length) {
+    alert("Select offered courses in the Enrollment tab to build slips.");
+    return;
+  }
   activeEnrollmentStudentId = String(studentId ?? "").trim();
   if (!activeEnrollmentStudentId || !elEnrollmentSlipModal) return;
   renderEnrollmentSlip();
@@ -1487,7 +1639,8 @@ function renderEnrollmentSlip() {
   }
 
   if (elEnrollmentSlipStudentMeta) {
-    elEnrollmentSlipStudentMeta.textContent = `${slip.studentId} - ${slip.name || "-"} | Intake: ${slip.intake || "-"}`;
+    elEnrollmentSlipStudentMeta.textContent = "";
+    elEnrollmentSlipStudentMeta.appendChild(buildEnrollmentMetaTable(slip));
   }
   if (elEnrollmentSlipCount) {
     elEnrollmentSlipCount.textContent = `${numberFmt.format(slip.courses.length)} course(s)`;
@@ -1497,7 +1650,7 @@ function renderEnrollmentSlip() {
   if (!slip.courses.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 3;
+    td.colSpan = 4;
     td.textContent = "No enrollment needed.";
     tr.appendChild(td);
     elEnrollmentSlipBody.appendChild(tr);
@@ -1512,10 +1665,358 @@ function renderEnrollmentSlip() {
     const tdTitle = document.createElement("td");
     tdTitle.textContent = course.title || "-";
     tr.appendChild(tdTitle);
+    const tdKey = document.createElement("td");
+    tdKey.textContent = formatEnrollmentKey(course.enrollKey);
+    tr.appendChild(tdKey);
     const tdRemark = document.createElement("td");
     tdRemark.textContent = course.remark;
     tr.appendChild(tdRemark);
     elEnrollmentSlipBody.appendChild(tr);
+  }
+}
+
+function buildEnrollmentMetaTable(slip) {
+  const makeCell = (label, value) => {
+    const td = document.createElement("td");
+    const labelSpan = document.createElement("span");
+    labelSpan.textContent = label;
+    td.appendChild(labelSpan);
+    td.appendChild(document.createElement("br"));
+    td.appendChild(document.createTextNode(String(value)));
+    return td;
+  };
+  const table = document.createElement("table");
+  const tbody = document.createElement("tbody");
+  const row1 = document.createElement("tr");
+  row1.appendChild(makeCell("Student Name", slip.name || "-"));
+  row1.appendChild(makeCell("Student ID", slip.studentId || "-"));
+  tbody.appendChild(row1);
+  const row2 = document.createElement("tr");
+  row2.appendChild(makeCell("Intake", slip.intake || "-"));
+  row2.appendChild(
+    makeCell(
+      "Current Semester",
+      slip.currentSemester === null ? "-" : String(slip.currentSemester)
+    )
+  );
+  tbody.appendChild(row2);
+  const completedCredits = toNumber(slip.completedCredits) ?? 0;
+  const row3 = document.createElement("tr");
+  row3.appendChild(
+    makeCell(
+      "Credits Completed",
+      `${numberFmt.format(completedCredits)} / ${ENROLLMENT_TARGET_CREDITS}`
+    )
+  );
+  row3.appendChild(makeCell("Status", slip.courses.length ? "Enrollment Needed" : "No Enrollment"));
+  tbody.appendChild(row3);
+  table.appendChild(tbody);
+  return table;
+}
+
+function formatEnrollmentKey(value) {
+  if (value === null) return "No key";
+  if (value === undefined) return "-";
+  const s = String(value ?? "").trim();
+  return s || "-";
+}
+
+function promptEnrollmentKey(courseCode, existingKey) {
+  const input = window.prompt(
+    `Set enrollment key for ${courseCode}.\nLeave blank for no key.`,
+    existingKey ?? ""
+  );
+  if (input === null) return false;
+  const trimmed = String(input).trim();
+  if (!trimmed) {
+    enrollmentKeys.set(courseCode, null);
+  } else {
+    enrollmentKeys.set(courseCode, trimmed);
+  }
+  saveEnrollmentKeys();
+  return true;
+}
+
+function appendBulkLog(message) {
+  if (!elEnrollmentBulkLog) return;
+  elEnrollmentBulkLog.textContent += `${message}\n`;
+}
+
+function resetBulkLog(message = "") {
+  if (!elEnrollmentBulkLog) return;
+  elEnrollmentBulkLog.textContent = message;
+}
+
+function setBulkLogStatus(message) {
+  if (!elEnrollmentBulkLog) return;
+  const lines = elEnrollmentBulkLog.textContent.split("\n");
+  lines[0] = message;
+  elEnrollmentBulkLog.textContent = lines.filter(Boolean).join("\n");
+}
+
+function sanitizeFileName(name) {
+  const trimmed = String(name ?? "").trim();
+  const safe = trimmed.replace(/[<>:"/\\|?*\x00-\x1F]/g, "").replace(/\s+/g, " ").trim();
+  return safe || "student";
+}
+
+function buildEnrollmentSlipExportNode(slip) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "slip";
+
+  const header = document.createElement("div");
+  header.className = "slip-header";
+  const headerLeft = document.createElement("div");
+  const title = document.createElement("h3");
+  title.className = "slip-title";
+  title.textContent = "Enrollment Slip";
+  headerLeft.appendChild(title);
+  const meta = document.createElement("div");
+  meta.className = "slip-meta";
+  meta.appendChild(buildEnrollmentMetaTable(slip));
+  headerLeft.appendChild(meta);
+  header.appendChild(headerLeft);
+  wrapper.appendChild(header);
+
+  const section = document.createElement("div");
+  section.className = "slip-section";
+  const heading = document.createElement("h4");
+  heading.textContent = "Courses To Enroll";
+  section.appendChild(heading);
+
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Course Code</th>
+      <th>Title</th>
+      <th>Enrollment Key</th>
+      <th>Remark</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  if (!slip.courses.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.textContent = "No enrollment needed.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  } else {
+    for (const course of slip.courses) {
+      const tr = document.createElement("tr");
+      const tdCode = document.createElement("td");
+      tdCode.textContent = course.courseCode;
+      tr.appendChild(tdCode);
+      const tdTitle = document.createElement("td");
+      tdTitle.textContent = course.title || "-";
+      tr.appendChild(tdTitle);
+      const tdKey = document.createElement("td");
+      tdKey.textContent = formatEnrollmentKey(course.enrollKey);
+      tr.appendChild(tdKey);
+      const tdRemark = document.createElement("td");
+      tdRemark.textContent = course.remark;
+      tr.appendChild(tdRemark);
+      tbody.appendChild(tr);
+    }
+  }
+  table.appendChild(tbody);
+  section.appendChild(table);
+  wrapper.appendChild(section);
+
+  return wrapper;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildEnrollmentSlipHtml(slip) {
+  const coursesRows = slip.courses.length
+    ? slip.courses
+        .map(
+          (course) => `
+            <tr>
+              <td>${escapeHtml(course.courseCode)}</td>
+              <td>${escapeHtml(course.title || "-")}</td>
+              <td>${escapeHtml(formatEnrollmentKey(course.enrollKey))}</td>
+              <td>${escapeHtml(course.remark)}</td>
+            </tr>
+          `
+        )
+        .join("")
+    : `
+      <tr>
+        <td colspan="4">No enrollment needed.</td>
+      </tr>
+    `;
+
+  const completedCredits = toNumber(slip.completedCredits) ?? 0;
+  const statusLabel = slip.courses.length ? "Enrollment Needed" : "No Enrollment";
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Enrollment Slip - ${escapeHtml(slip.name || slip.studentId || "Student")}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #101418;
+        --muted: #5f6b7a;
+        --border: rgba(16, 20, 24, 0.12);
+        --surface: #ffffff;
+        --surface-2: #f6f8fb;
+        --radius: 16px;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Segoe UI", sans-serif; color: var(--ink); background: #fff; }
+      .shell { max-width: 900px; margin: 0 auto; padding: 24px; }
+      .slip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+      .slip-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+      .slip-title { margin: 0; font-size: 22px; }
+      .slip-meta { font-size: 13px; color: var(--muted); }
+      .slip-meta table { width: auto; border-collapse: collapse; }
+      .slip-meta td { padding: 4px 12px 4px 0; color: var(--ink); }
+      .slip-meta td span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+      .slip-section h4 { margin: 0 0 8px; font-size: 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 8px; border-bottom: 1px solid rgba(16, 20, 24, 0.08); }
+      th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+      @media print {
+        @page { size: A4 portrait; margin: 12mm; }
+        .shell { padding: 0; }
+        .slip { border: none; border-radius: 0; padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="slip">
+        <div class="slip-header">
+          <div>
+            <h3 class="slip-title">Enrollment Slip</h3>
+            <div class="slip-meta">
+              <table>
+                <tbody>
+                  <tr>
+                    <td><span>Student Name</span><br />${escapeHtml(slip.name || "-")}</td>
+                    <td><span>Student ID</span><br />${escapeHtml(slip.studentId || "-")}</td>
+                  </tr>
+                  <tr>
+                    <td><span>Intake</span><br />${escapeHtml(slip.intake || "-")}</td>
+                    <td><span>Current Semester</span><br />${escapeHtml(
+                      slip.currentSemester === null ? "-" : String(slip.currentSemester)
+                    )}</td>
+                  </tr>
+                  <tr>
+                    <td><span>Credits Completed</span><br />${escapeHtml(
+                      `${numberFmt.format(completedCredits)} / ${ENROLLMENT_TARGET_CREDITS}`
+                    )}</td>
+                    <td><span>Status</span><br />${escapeHtml(statusLabel)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="slip-section">
+          <h4>Courses To Enroll</h4>
+          <table>
+            <thead>
+              <tr>
+                <th>Course Code</th>
+                <th>Title</th>
+                <th>Enrollment Key</th>
+                <th>Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${coursesRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+async function bulkExportEnrollmentSlips() {
+  if (!btnEnrollmentBulkPrint) return;
+  if (!window.JSZip || !window.saveAs) {
+    alert("Bulk export libraries not loaded.");
+    return;
+  }
+
+  if (!enrollmentState.offeredCourseCodes.length) {
+    buildEnrollmentSlips({ suppressMinAlert: true });
+  }
+  if (!enrollmentState.offeredCourseCodes.length) {
+    alert("Select offered courses in the Enrollment tab before bulk export.");
+    return;
+  }
+
+  buildEnrollmentSlips({ suppressMinAlert: true });
+
+  const slips = enrollmentState.slips.slice();
+  if (!slips.length) {
+    resetBulkLog("No students available for bulk export.");
+    return;
+  }
+
+  btnEnrollmentBulkPrint.disabled = true;
+  const originalLabel = btnEnrollmentBulkPrint.textContent;
+  btnEnrollmentBulkPrint.textContent = "Exporting...";
+  resetBulkLog(`Written 0 of ${slips.length}`);
+
+  try {
+    const zip = new window.JSZip();
+    const nameCounts = new Map();
+    const failedNames = [];
+    let written = 0;
+
+    for (let i = 0; i < slips.length; i += 1) {
+      const slip = slips[i];
+      const baseName = sanitizeFileName(slip.name || slip.studentId || "student");
+      const count = (nameCounts.get(baseName) ?? 0) + 1;
+      nameCounts.set(baseName, count);
+      const fileName = count > 1 ? `${baseName} (${count}).html` : `${baseName}.html`;
+
+      try {
+        const html = buildEnrollmentSlipHtml(slip);
+        zip.file(fileName, html);
+        written += 1;
+        setBulkLogStatus(`Written ${written} of ${slips.length}`);
+      } catch (e) {
+        const label = slip.name || slip.studentId || "Unknown";
+        failedNames.push(label);
+      }
+    }
+
+    setBulkLogStatus(`Written ${written} of ${slips.length}`);
+    if (failedNames.length) {
+      appendBulkLog(`Failed ${failedNames.length} slip(s):`);
+      failedNames.forEach((name) => appendBulkLog(`- ${name}`));
+    }
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const stamp = new Date().toISOString().slice(0, 10);
+    window.saveAs(zipBlob, `enrollment-slips-${stamp}.zip`);
+    setBulkLogStatus(`Written ${written} of ${slips.length} (ZIP ready)`);
+  } catch (e) {
+    console.error(e);
+    appendBulkLog(`ERROR: ${e.message ?? e}`);
+    alert(`Bulk export failed: ${e.message ?? e}`);
+  } finally {
+    btnEnrollmentBulkPrint.textContent = originalLabel;
+    btnEnrollmentBulkPrint.disabled = false;
   }
 }
 
@@ -1526,6 +2027,7 @@ function refreshEnrollmentModule() {
     return;
   }
   enrollmentState.slips = [];
+  enrollmentPaging.page = 1;
   renderEnrollmentList();
   closeEnrollmentSlip();
 }
@@ -1638,6 +2140,74 @@ function renderCourseList(courses) {
     tr.appendChild(tdView);
 
     elCourseListBody.appendChild(tr);
+  }
+}
+
+function renderStudentList() {
+  if (!elStudentListTable || !elStudentListBody || !elStudentListEmpty) return;
+  const students = getEnrollmentStudents();
+  if (!students.length) {
+    elStudentListBody.textContent = "";
+    elStudentListTable.style.display = "none";
+    elStudentListEmpty.style.display = "block";
+    return;
+  }
+
+  elStudentListEmpty.style.display = "none";
+  elStudentListTable.style.display = "table";
+  elStudentListBody.textContent = "";
+
+  for (const student of students) {
+    const studentId = String(student.studentId ?? "").trim();
+    const tr = document.createElement("tr");
+
+    const tdId = document.createElement("td");
+    tdId.textContent = studentId || "-";
+    tr.appendChild(tdId);
+
+    const tdName = document.createElement("td");
+    tdName.textContent = String(student.name ?? "").trim() || "-";
+    tr.appendChild(tdName);
+
+    const tdAction = document.createElement("td");
+    const btnResult = document.createElement("button");
+    btnResult.className = "btn secondary small";
+    btnResult.type = "button";
+    btnResult.textContent = "Result Slip";
+    btnResult.addEventListener("click", () => {
+      if (!studentId) return;
+      openSlip(studentId);
+    });
+    tdAction.appendChild(btnResult);
+
+    const btnEnroll = document.createElement("button");
+    btnEnroll.className = "btn secondary small";
+    btnEnroll.type = "button";
+    btnEnroll.textContent = "Enrollment Slip";
+    btnEnroll.style.marginLeft = "8px";
+    btnEnroll.addEventListener("click", () => {
+      if (!studentId) return;
+      openEnrollmentSlip(studentId);
+    });
+    tdAction.appendChild(btnEnroll);
+    tr.appendChild(tdAction);
+
+    elStudentListBody.appendChild(tr);
+  }
+}
+
+function updateSlipConfirmStatus() {
+  if (elResultSlipConfirmStatus) {
+    const stamp = localStorage.getItem(CONFIRM_RESULT_KEY);
+    elResultSlipConfirmStatus.textContent = stamp
+      ? `Result: Confirmed ${new Date(stamp).toLocaleString()}`
+      : "Result: Not confirmed";
+  }
+  if (elEnrollmentSlipConfirmStatus) {
+    const stamp = localStorage.getItem(CONFIRM_ENROLL_KEY);
+    elEnrollmentSlipConfirmStatus.textContent = stamp
+      ? `Enrollment: Confirmed ${new Date(stamp).toLocaleString()}`
+      : "Enrollment: Not confirmed";
   }
 }
 
@@ -2018,8 +2588,31 @@ if (btnEnrollmentBuild) {
   });
 }
 
+if (btnEnrollmentBulkPrint) {
+  btnEnrollmentBulkPrint.addEventListener("click", () => {
+    bulkExportEnrollmentSlips();
+  });
+}
+
 if (elEnrollmentSearch) {
   elEnrollmentSearch.addEventListener("input", () => {
+    enrollmentPaging.page = 1;
+    renderEnrollmentList();
+  });
+}
+
+if (btnEnrollmentPrev) {
+  btnEnrollmentPrev.addEventListener("click", () => {
+    if (enrollmentPaging.page > 1) {
+      enrollmentPaging.page -= 1;
+      renderEnrollmentList();
+    }
+  });
+}
+
+if (btnEnrollmentNext) {
+  btnEnrollmentNext.addEventListener("click", () => {
+    enrollmentPaging.page += 1;
     renderEnrollmentList();
   });
 }
@@ -2095,6 +2688,7 @@ if (elStudentEditModal) {
 
 if (btnPrintSlip) {
   btnPrintSlip.addEventListener("click", () => {
+    setPrintMode("result");
     window.print();
   });
 }
@@ -2108,6 +2702,13 @@ if (btnCloseSlip) {
 if (btnCloseEnrollmentSlip) {
   btnCloseEnrollmentSlip.addEventListener("click", () => {
     closeEnrollmentSlip();
+  });
+}
+
+if (btnPrintEnrollmentSlip) {
+  btnPrintEnrollmentSlip.addEventListener("click", () => {
+    setPrintMode("enrollment");
+    window.print();
   });
 }
 
@@ -2280,9 +2881,44 @@ if (btnCourseReset) {
   });
 }
 
+if (btnConfirmResultSlips) {
+  btnConfirmResultSlips.addEventListener("click", () => {
+    localStorage.setItem(CONFIRM_RESULT_KEY, new Date().toISOString());
+    updateSlipConfirmStatus();
+    alert("Result slips confirmed.");
+  });
+}
+
+if (btnConfirmEnrollmentSlips) {
+  btnConfirmEnrollmentSlips.addEventListener("click", () => {
+    if (!enrollmentState.offeredCourseCodes.length) {
+      buildEnrollmentSlips({ suppressMinAlert: true });
+    }
+    if (!enrollmentState.offeredCourseCodes.length) {
+      alert("Select offered courses in the Enrollment tab before confirming.");
+      return;
+    }
+    buildEnrollmentSlips({ suppressMinAlert: true });
+    localStorage.setItem(CONFIRM_ENROLL_KEY, new Date().toISOString());
+    updateSlipConfirmStatus();
+    alert("Enrollment slips confirmed.");
+  });
+}
+
 Promise.resolve().then(async () => {
   try {
     initImports({
+      onDataChanged: async () => {
+        await refreshStats();
+        await refreshCourses();
+        await refreshResults();
+      },
+    });
+  } catch (e) {
+    console.error(e);
+  }
+  try {
+    initStudentImport({
       onDataChanged: async () => {
         await refreshStats();
         await refreshCourses();
@@ -2303,8 +2939,14 @@ Promise.resolve().then(async () => {
   } catch (e) {
     console.error(e);
   }
+  try {
+    initPortalExport();
+  } catch (e) {
+    console.error(e);
+  }
   await refreshStats();
   await refreshCourses();
   await refreshResults();
+  updateSlipConfirmStatus();
   setActiveResultSubtab("overview");
 });

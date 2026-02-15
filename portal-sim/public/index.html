@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ODL Student Portal (Sim)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8fb;
+        --surface: #ffffff;
+        --ink: #101418;
+        --muted: #5f6b7a;
+        --accent: #1d4ed8;
+        --border: rgba(16, 20, 24, 0.12);
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+      .shell { max-width: 980px; margin: 0 auto; padding: 32px 20px 60px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+      .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+      .field { display: flex; flex-direction: column; gap: 6px; }
+      label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+      input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); }
+      .btn { background: var(--accent); color: #fff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+      .btn.secondary { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+      .muted { color: var(--muted); font-size: 13px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; border-bottom: 1px solid rgba(16, 20, 24, 0.08); padding: 8px; }
+      th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+      .hidden { display: none; }
+      .section-title { margin: 0 0 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <h1>ODL Student Portal (Simulation)</h1>
+      <p class="muted">Login with Student ID + IC to request OTP. Use OTP from server console.</p>
+
+      <div class="card" id="loginCard">
+        <div class="grid">
+          <div class="field" style="grid-column: span 4;">
+            <label for="studentId">Student ID</label>
+            <input id="studentId" type="text" />
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="studentName">Full Name (optional)</label>
+            <input id="studentName" type="text" />
+          </div>
+          <div class="field" style="grid-column: span 4;">
+            <label for="studentIc">IC</label>
+            <input id="studentIc" type="password" />
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top: 12px;">
+          <button class="btn" id="btnRequestOtp">Request OTP</button>
+          <button class="btn secondary" id="btnVerifyOtp">Verify OTP</button>
+          <input id="otpInput" type="text" placeholder="OTP" style="max-width: 140px;" />
+        </div>
+        <div class="muted" id="loginLog" style="margin-top: 10px;"></div>
+      </div>
+
+      <div class="card hidden" id="profileCard" style="margin-top: 20px;">
+        <h2 class="section-title">Welcome</h2>
+        <div class="muted" id="profileMeta"></div>
+
+        <div class="grid" style="margin-top: 16px;">
+          <div class="card" style="grid-column: span 6;">
+            <h3 class="section-title">Exam Slip</h3>
+            <p class="muted">View and print your academic result slip.</p>
+            <button class="btn" id="btnShowExam">Open Exam Slip</button>
+          </div>
+          <div class="card" style="grid-column: span 6;">
+            <h3 class="section-title">Enrollment Slip</h3>
+            <p class="muted">View and print your enrollment slip.</p>
+            <button class="btn" id="btnShowEnrollment">Open Enrollment Slip</button>
+          </div>
+        </div>
+
+        <div class="card hidden" id="examSlipCard" style="margin-top: 16px;">
+          <div style="display:flex; justify-content: space-between; align-items:center; gap: 12px;">
+            <h3 class="section-title" style="margin:0;">Exam Slip</h3>
+            <button class="btn secondary" id="btnPrintExam">Print Exam Slip</button>
+          </div>
+          <div id="resultSummary" style="margin-top: 10px;"></div>
+          <div id="resultSlip" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="card hidden" id="enrollmentSlipCard" style="margin-top: 16px;">
+          <div style="display:flex; justify-content: space-between; align-items:center; gap: 12px;">
+            <h3 class="section-title" style="margin:0;">Enrollment Slip</h3>
+            <button class="btn secondary" id="btnPrintEnrollment">Print Enrollment Slip</button>
+          </div>
+          <div id="enrollmentSlip" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const api = (path, options = {}) =>
+        fetch(path, {
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options,
+        }).then(async (res) => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Request failed");
+          return data;
+        });
+
+      const loginLog = document.getElementById("loginLog");
+      const profileCard = document.getElementById("profileCard");
+      const profileMeta = document.getElementById("profileMeta");
+      const enrollmentSlip = document.getElementById("enrollmentSlip");
+      const resultSummary = document.getElementById("resultSummary");
+      const resultSlip = document.getElementById("resultSlip");
+      const examSlipCard = document.getElementById("examSlipCard");
+      const enrollmentSlipCard = document.getElementById("enrollmentSlipCard");
+      const btnShowExam = document.getElementById("btnShowExam");
+      const btnShowEnrollment = document.getElementById("btnShowEnrollment");
+      const btnPrintExam = document.getElementById("btnPrintExam");
+      const btnPrintEnrollment = document.getElementById("btnPrintEnrollment");
+
+      let token = "";
+      let currentUpdateId = 0;
+
+      document.getElementById("btnRequestOtp").addEventListener("click", async () => {
+        loginLog.textContent = "Requesting OTP...";
+        try {
+          const studentId = document.getElementById("studentId").value;
+          const name = document.getElementById("studentName").value;
+          const ic = document.getElementById("studentIc").value;
+          const res = await api("/api/auth/request-otp", {
+            method: "POST",
+            body: JSON.stringify({ studentId, name, ic }),
+          });
+          loginLog.textContent = `OTP sent. Demo OTP: ${res.demoOtp}`;
+        } catch (e) {
+          loginLog.textContent = e.message;
+        }
+      });
+
+      document.getElementById("btnVerifyOtp").addEventListener("click", async () => {
+        loginLog.textContent = "Verifying OTP...";
+        try {
+          const studentId = document.getElementById("studentId").value;
+          const otp = document.getElementById("otpInput").value;
+          const res = await api("/api/auth/verify-otp", {
+            method: "POST",
+            body: JSON.stringify({ studentId, otp }),
+          });
+          token = res.token;
+          loginLog.textContent = "Login successful.";
+          await loadProfile();
+        } catch (e) {
+          loginLog.textContent = e.message;
+        }
+      });
+
+      btnShowExam.addEventListener("click", () => {
+        examSlipCard.classList.remove("hidden");
+        enrollmentSlipCard.classList.add("hidden");
+        examSlipCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      btnShowEnrollment.addEventListener("click", () => {
+        enrollmentSlipCard.classList.remove("hidden");
+        examSlipCard.classList.add("hidden");
+        enrollmentSlipCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      btnPrintExam.addEventListener("click", () => {
+        window.print();
+      });
+
+      btnPrintEnrollment.addEventListener("click", () => {
+        window.print();
+      });
+
+      async function loadProfile() {
+        const authHeader = { Authorization: `Bearer ${token}` };
+        const profile = await api("/api/me/profile", { headers: authHeader });
+        const enrollment = await api("/api/me/enrollment", { headers: authHeader });
+        const results = await api("/api/me/results", { headers: authHeader });
+        try {
+          const status = await api(`/api/admin/update-status?ts=${Date.now()}`);
+          currentUpdateId = status.updateId || 0;
+        } catch (_) {
+          currentUpdateId = 0;
+        }
+
+        profileCard.classList.remove("hidden");
+        profileMeta.textContent = `${profile.name} (${profile.studentId})`;
+        const renderCourseList = (list, emptyLabel) => {
+          if (!list || !list.length) {
+            return `<div class="muted">${emptyLabel}</div>`;
+          }
+          const rows = list
+            .map(
+              (course) => `
+              <tr>
+                <td>${course.course_code}</td>
+                <td>${course.title || "-"}</td>
+              </tr>`
+            )
+            .join("");
+          return `
+            <table>
+              <thead>
+                <tr>
+                  <th>Course Code</th>
+                  <th>Course Name</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        };
+
+        enrollmentSlip.innerHTML = `
+          <div><strong>Program:</strong> ${enrollment.program}</div>
+          <div><strong>Intake:</strong> ${enrollment.intake}</div>
+          <div><strong>Current Semester:</strong> ${enrollment.currentSemester}</div>
+          <div><strong>Status:</strong> ${enrollment.status}</div>
+          <h4 style="margin: 14px 0 6px;">Courses Not Taken</h4>
+          ${renderCourseList(enrollment.notTaken, "All courses completed.")}
+          <h4 style="margin: 14px 0 6px;">Failed Courses (Repeat)</h4>
+          ${renderCourseList(enrollment.failed, "No failed courses.")}
+        `;
+
+        resultSummary.innerHTML = `
+          <div><strong>CGPA:</strong> ${results.cgpa ? results.cgpa.toFixed(2) : "--"}</div>
+          <div><strong>Total Terms:</strong> ${results.terms.length}</div>
+        `;
+
+        resultSlip.innerHTML = results.terms
+          .map((term) => {
+            const rows = term.rows
+              .map(
+                (row) => `
+                <tr>
+                  <td>${row.courseCode}</td>
+                  <td>${row.title || "-"}</td>
+                  <td>${row.credits ?? "-"}</td>
+                  <td>${row.mark ?? "-"}</td>
+                  <td>${row.letter || "-"}</td>
+                </tr>`
+              )
+              .join("");
+            return `
+              <h4>${term.session} - Semester ${term.semester}</h4>
+              <div class="muted">GPA: ${term.gpa ? term.gpa.toFixed(2) : "--"}</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Title</th>
+                    <th>Credits</th>
+                    <th>Mark</th>
+                    <th>Letter</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            `;
+          })
+          .join("");
+
+        examSlipCard.classList.add("hidden");
+        enrollmentSlipCard.classList.add("hidden");
+      }
+
+      setInterval(async () => {
+        if (!token) return;
+        try {
+          const status = await api(`/api/admin/update-status?ts=${Date.now()}`);
+          const nextId = status.updateId || 0;
+          if (nextId && nextId !== currentUpdateId) {
+            alert("New data is available. Reloading your slips.");
+            await loadProfile();
+          }
+        } catch (_) {
+          // ignore
+        }
+      }, 15000);
+    </script>
+  </body>
+</html>

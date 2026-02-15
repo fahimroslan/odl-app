@@ -489,6 +489,28 @@
         font: inherit;
       }
 
+      .enrollment-key-label {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .enrollment-key-btn {
+        justify-self: start;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      .enrollment-course-item.selected .enrollment-key-label,
+      .enrollment-course-item.selected .enrollment-key-btn {
+        color: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
       .enrollment-course-item.selected {
         border-color: var(--accent);
         background: var(--accent);
@@ -671,18 +693,28 @@
         #panel-courses,
         #panel-enrollment,
         #panel-results,
-        #courseCoverageModal {
+        #courseCoverageModal,
+        #resultPreviewModal,
+        #studentEditModal,
+        #markEditModal {
           display: none !important;
         }
 
-        #resultSlipModal {
+        #resultSlipModal,
+        #enrollmentSlipModal {
           position: static;
-          display: block;
+          display: none;
           padding: 0;
           background: none;
         }
 
-        #resultSlipModal .modal-card {
+        body[data-print-mode="result"] #resultSlipModal,
+        body[data-print-mode="enrollment"] #enrollmentSlipModal {
+          display: block;
+        }
+
+        #resultSlipModal .modal-card,
+        #enrollmentSlipModal .modal-card {
           width: 100%;
           max-height: none;
           overflow: visible;
@@ -691,7 +723,8 @@
           padding: 0;
         }
 
-        #resultSlip {
+        #resultSlip,
+        #enrollmentSlip {
           position: static;
           width: 100%;
         }
@@ -719,7 +752,8 @@
           font-size: 11px;
         }
 
-        .slip-actions {
+        .slip-actions,
+        .modal-header .form-actions {
           display: none;
         }
 
@@ -733,15 +767,12 @@
 
         table {
           font-size: 11px;
+          page-break-inside: auto;
         }
 
         th,
         td {
           padding: 6px 6px;
-        }
-
-        table {
-          page-break-inside: auto;
         }
 
         tr {
@@ -817,6 +848,9 @@
         </button>
         <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="courses">
           Courses
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="students">
+          Students
         </button>
         <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="results">
           Results
@@ -984,6 +1018,37 @@
             <pre id="logImports"></pre>
           </div>
 
+          <div class="card import-card fade-up delay-2" style="grid-column: span 6;">
+            <div class="card-title">
+              <h2>Import Students CSV</h2>
+              <span class="chip">Bulk Register</span>
+            </div>
+            <div class="import-row">
+              <select id="studentIntakeYear" aria-label="Intake year">
+                <option value="">Year</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+              </select>
+              <select id="studentIntakeMonth" aria-label="Intake month">
+                <option value="">Month</option>
+                <option value="02">02</option>
+                <option value="09">09</option>
+              </select>
+              <input type="file" id="studentCsvFile" accept=".csv" />
+              <button class="btn" id="btnImportStudents">Import</button>
+            </div>
+            <p class="muted">
+              Required columns: StudentID, Name. Optional: IC. Intake is set from the selected year/month.
+            </p>
+            <div class="muted">
+              Example template: <a href="./example-students.csv" download>Download example-students.csv</a>
+            </div>
+            <h3 class="card-title" style="margin-top: 10px;"><span>Log</span></h3>
+            <pre id="studentImportLog"></pre>
+          </div>
+
           <div class="card fade-up delay-2" style="grid-column: span 6;">
             <div class="card-title">
               <h2>Upload New Results</h2>
@@ -1039,6 +1104,60 @@
             </p>
             <h3 class="card-title" style="margin-top: 10px;"><span>Backup Log</span></h3>
             <pre id="backupLog"></pre>
+          </div>
+
+          <div class="card fade-up delay-2" style="grid-column: span 12;">
+            <div class="card-title">
+              <h2>Portal Export</h2>
+              <span class="chip">JSON</span>
+            </div>
+            <div class="import-row">
+              <input
+                type="text"
+                id="portalUploadUrl"
+                value="http://localhost:5179/api/admin/import-portal-export"
+                aria-label="Portal upload URL"
+                style="flex: 1 1 360px;"
+              />
+              <button class="btn secondary" type="button" id="btnPortalUpload">Upload to Portal</button>
+            </div>
+            <p class="muted">
+              Generates a JSON package for the student portal (students, courses, results, metadata).
+            </p>
+            <h3 class="card-title" style="margin-top: 10px;"><span>Export Log</span></h3>
+            <pre id="portalExportLog"></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-students" role="tabpanel">
+        <div class="grid">
+          <div class="card fade-up delay-2" style="grid-column: span 12;">
+            <div class="card-title">
+              <h2>Student List</h2>
+              <span class="chip">Slip Access</span>
+            </div>
+            <div class="form-actions" style="margin-bottom: 12px;">
+              <button class="btn secondary small" type="button" id="btnConfirmResultSlips">
+                Confirm Result Slips
+              </button>
+              <span class="chip" id="resultSlipConfirmStatus">Result: Not confirmed</span>
+              <button class="btn secondary small" type="button" id="btnConfirmEnrollmentSlips">
+                Confirm Enrollment Slips
+              </button>
+              <span class="chip" id="enrollmentSlipConfirmStatus">Enrollment: Not confirmed</span>
+            </div>
+            <div id="studentListEmpty" class="empty">No students yet. Import results or students to begin.</div>
+            <table id="studentListTable" style="display: none; margin-top: 12px;">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="studentListBody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -1233,7 +1352,9 @@
               <button class="btn secondary small" type="button" id="btnEnrollmentSelectAll">Select all</button>
               <button class="btn secondary small" type="button" id="btnEnrollmentClearAll">Clear</button>
               <button class="btn small" type="button" id="btnEnrollmentBuild">Build Slips</button>
+              <button class="btn secondary small" type="button" id="btnEnrollmentBulkPrint">Bulk Export (ZIP HTML)</button>
             </div>
+            <pre id="enrollmentBulkLog" aria-live="polite"></pre>
           </div>
 
           <div class="enrollment-layout" style="grid-column: span 12;">
@@ -1264,6 +1385,11 @@
                 </thead>
                 <tbody id="enrollmentListBody"></tbody>
               </table>
+              <div class="form-actions" id="enrollmentPager" style="display: none; margin-top: 12px;">
+                <button class="btn secondary small" type="button" id="btnEnrollmentPrev">Previous</button>
+                <span class="muted" id="enrollmentPageMeta">Page 1 of 1</span>
+                <button class="btn secondary small" type="button" id="btnEnrollmentNext">Next</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1302,33 +1428,37 @@
     </div>
 
     <div class="modal" id="enrollmentSlipModal" aria-hidden="true">
-      <div class="modal-card">
-        <div class="modal-header">
-          <div>
-            <h3 class="slip-title" style="margin: 0;">Enrollment Slip</h3>
-            <div class="muted">Generated from selected offered courses.</div>
+        <div class="modal-card">
+          <div class="modal-header">
+            <div>
+              <h3 class="slip-title" style="margin: 0;">Enrollment Slip</h3>
+              <div class="muted">Generated from selected offered courses.</div>
+            </div>
+            <div class="form-actions">
+              <button class="btn secondary" type="button" id="btnPrintEnrollmentSlip">Print Slip</button>
+              <button class="btn secondary" type="button" id="btnCloseEnrollmentSlip">Close</button>
+            </div>
           </div>
-          <div class="form-actions">
-            <button class="btn secondary" type="button" id="btnCloseEnrollmentSlip">Close</button>
-          </div>
-        </div>
-        <div class="card-title">
-          <h2>Courses To Enroll</h2>
-          <span class="chip" id="enrollmentSlipCount">0 course(s)</span>
-        </div>
-        <div class="muted" id="enrollmentSlipStudentMeta">--</div>
+          <div id="enrollmentSlip" class="slip">
+            <div class="card-title">
+              <h2>Courses To Enroll</h2>
+              <span class="chip" id="enrollmentSlipCount">0 course(s)</span>
+            </div>
+            <div class="slip-meta" id="enrollmentSlipStudentMeta">--</div>
         <table style="margin-top: 10px;">
           <thead>
             <tr>
               <th>Course Code</th>
               <th>Title</th>
+              <th>Enrollment Key</th>
               <th>Remark</th>
             </tr>
           </thead>
           <tbody id="enrollmentSlipBody"></tbody>
         </table>
+          </div>
+        </div>
       </div>
-    </div>
 
     <div class="modal" id="courseCoverageModal" aria-hidden="true">
       <div class="modal-card">
@@ -1488,6 +1618,8 @@
 
 
 
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script type="module" src="./app/main.js"></script>
   </body>
 </html>
