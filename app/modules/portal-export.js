@@ -8,6 +8,77 @@ function appendLog(el, msg) {
 
 const CONFIRM_RESULT_KEY = "odlConfirmResultSlipsAt";
 const CONFIRM_ENROLL_KEY = "odlConfirmEnrollmentSlipsAt";
+const ENROLLMENT_CONFIRM_TOKEN_KEY = "odlConfirmEnrollmentSlipsToken";
+const ENROLLMENT_DATA_REVISION_KEY = "odlEnrollmentDataRevision";
+const ENROLLMENT_SELECTION_KEY = "odlEnrollmentOfferedCourses";
+const ENROLLMENT_KEYS_KEY = "odlEnrollmentCourseKeys";
+const ENROLLMENT_MAX_OFFERED = 15;
+
+function normalizeCourseCode(value) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function hashTextFNV1a(value, seed = 0x811c9dc5) {
+  let hash = seed >>> 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+function toHashHex(value) {
+  return (value >>> 0).toString(16).padStart(8, "0");
+}
+
+function getEnrollmentSelectionSnapshot() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ENROLLMENT_SELECTION_KEY) || "[]");
+    if (!Array.isArray(stored)) return [];
+    return [...new Set(stored.map((code) => normalizeCourseCode(code)).filter(Boolean))]
+      .sort()
+      .slice(0, ENROLLMENT_MAX_OFFERED);
+  } catch (_) {
+    return [];
+  }
+}
+
+function getEnrollmentKeysMap() {
+  const map = new Map();
+  try {
+    const stored = JSON.parse(localStorage.getItem(ENROLLMENT_KEYS_KEY) || "{}");
+    if (!stored || typeof stored !== "object" || Array.isArray(stored)) return map;
+    for (const [rawCode, key] of Object.entries(stored)) {
+      const code = normalizeCourseCode(rawCode);
+      if (!code) continue;
+      if (key === null) {
+        map.set(code, null);
+        continue;
+      }
+      const value = String(key ?? "").trim();
+      if (value) map.set(code, value);
+    }
+  } catch (_) {
+    return map;
+  }
+  return map;
+}
+
+function computeEnrollmentConfirmToken() {
+  const revision = localStorage.getItem(ENROLLMENT_DATA_REVISION_KEY) || "";
+  const selectedCodes = getEnrollmentSelectionSnapshot();
+  const enrollmentKeys = getEnrollmentKeysMap();
+
+  let hash = hashTextFNV1a("enrollment-confirm-token:v1\n");
+  hash = hashTextFNV1a(`V|${revision}\n`, hash);
+  for (const code of selectedCodes) {
+    const key = enrollmentKeys.has(code) ? enrollmentKeys.get(code) : undefined;
+    const keyValue = key === null ? "~" : key === undefined ? "" : String(key).trim();
+    hash = hashTextFNV1a(`C|${code}\n`, hash);
+    hash = hashTextFNV1a(`K|${code}|${keyValue}\n`, hash);
+  }
+  return toHashHex(hash);
+}
 
 function countMissing(value) {
   if (value === null || value === undefined) return true;
@@ -136,6 +207,10 @@ export function initPortalExport() {
         const enrollmentConfirmed = localStorage.getItem(CONFIRM_ENROLL_KEY);
         if (!resultConfirmed || !enrollmentConfirmed) {
           throw new Error("Please confirm Result Slips and Enrollment Slips on the Students tab first.");
+        }
+        const enrollmentConfirmToken = localStorage.getItem(ENROLLMENT_CONFIRM_TOKEN_KEY);
+        if (!enrollmentConfirmToken || enrollmentConfirmToken !== computeEnrollmentConfirmToken()) {
+          throw new Error("Enrollment confirmation is outdated. Rebuild and confirm Enrollment Slips on the Students tab first.");
         }
         appendLog(elPortalExportLog, "Preparing export for upload...");
         btnPortalUpload.disabled = true;

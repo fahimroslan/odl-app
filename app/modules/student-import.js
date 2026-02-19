@@ -19,7 +19,25 @@ function getRowValue(row, keys) {
   return "";
 }
 
-function normalizeStudentRow(rawRow, intake, intakeYear, intakeMonth) {
+function normalizeNameKey(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function parseIntake(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const match = raw.match(/^(\d{4})[./-](\d{1,2})$/);
+  if (!match) return null;
+  const year = match[1];
+  const month = match[2].padStart(2, "0");
+  if (!/^(02|09)$/.test(month)) return null;
+  return { intake: `${year}/${month}`, year, month };
+}
+
+function normalizeStudentRow(rawRow) {
   const row = {};
   for (const key of Object.keys(rawRow)) {
     row[normalizeKey(key)] = rawRow[key];
@@ -30,43 +48,280 @@ function normalizeStudentRow(rawRow, intake, intakeYear, intakeMonth) {
   ).trim();
   const name = String(getRowValue(row, ["name", "fullname", "studentname"])).trim();
   const ic = String(getRowValue(row, ["ic", "icno", "nric", "nricno"])).trim();
+  const intakeRaw = getRowValue(row, ["intake", "intakecode", "intakesession"]);
+  const intakeParsed = parseIntake(intakeRaw);
 
-  if (!studentId || !name) return null;
+  if (!studentId || !name || !intakeParsed) return null;
 
   return {
     studentId,
     name,
     ic,
-    intake,
-    intakeYear,
-    intakeMonth,
+    intake: intakeParsed.intake,
+    intakeYear: intakeParsed.year,
+    intakeMonth: intakeParsed.month,
   };
 }
 
-function validateIntake(year, month) {
-  if (!year || !month) throw new Error("Intake year and month are required.");
-  if (!/^\d{4}$/.test(year)) throw new Error("Intake year must be YYYY.");
-  if (!/^(02|09)$/.test(month)) {
-    throw new Error("Intake month must be 02 or 09.");
+function toDisplayStatus(row) {
+  if (row.statusType === "new") return "New";
+  if (row.statusType === "duplicate_id_existing") return "Duplicate ID (existing)";
+  if (row.statusType === "duplicate_id_csv") return "Duplicate ID (CSV)";
+  if (row.statusType === "duplicate_name_existing") {
+    return `Duplicate Name (existing ID: ${row.existingStudentId})`;
   }
-  return `${year}-${month}`;
+  if (row.statusType === "duplicate_name_csv") return "Duplicate Name (CSV)";
+  if (row.statusType === "missing_required") return "Missing required fields";
+  return "Unknown";
+}
+
+function buildStudentImportPreview({
+  parsedRows,
+  existingStudents,
+}) {
+  const existingById = new Map();
+  const existingByName = new Map();
+  for (const student of existingStudents) {
+    const existingId = String(student?.studentId ?? "").trim();
+    if (existingId) existingById.set(existingId, student);
+    const nameKey = normalizeNameKey(student?.name);
+    if (nameKey && !existingByName.has(nameKey)) {
+      existingByName.set(nameKey, student);
+    }
+  }
+
+  const seenIds = new Set();
+  const seenNames = new Map();
+  const rows = [];
+  const summary = {
+    totalRows: parsedRows.length,
+    newCount: 0,
+    duplicateIdExisting: 0,
+    duplicateIdCsv: 0,
+    duplicateNameExisting: 0,
+    duplicateNameCsv: 0,
+    missingRequired: 0,
+  };
+
+  parsedRows.forEach((rawRow, index) => {
+    const rowNo = index + 2;
+    const normalizedRaw = {};
+    for (const key of Object.keys(rawRow ?? {})) {
+      normalizedRaw[normalizeKey(key)] = rawRow[key];
+    }
+    const draftId = String(
+      getRowValue(normalizedRaw, ["studentid", "id", "studentno", "matric", "matricno", "student_id"])
+    ).trim();
+    const draftName = String(getRowValue(normalizedRaw, ["name", "fullname", "studentname"])).trim();
+
+    const candidate = normalizeStudentRow(rawRow);
+    if (!candidate) {
+      summary.missingRequired += 1;
+      rows.push({
+        rowNo,
+        studentId: draftId,
+        name: draftName,
+        statusType: "missing_required",
+        selectable: false,
+        defaultChecked: false,
+      });
+      return;
+    }
+
+    const studentId = String(candidate.studentId ?? "").trim();
+    const nameKey = normalizeNameKey(candidate.name);
+
+    if (seenIds.has(studentId)) {
+      summary.duplicateIdCsv += 1;
+      rows.push({
+        rowNo,
+        studentId: candidate.studentId,
+        name: candidate.name,
+        statusType: "duplicate_id_csv",
+        selectable: false,
+        defaultChecked: false,
+        candidate,
+      });
+      return;
+    }
+    if (existingById.has(studentId)) {
+      summary.duplicateIdExisting += 1;
+      rows.push({
+        rowNo,
+        studentId: candidate.studentId,
+        name: candidate.name,
+        statusType: "duplicate_id_existing",
+        selectable: false,
+        defaultChecked: false,
+        candidate,
+      });
+      return;
+    }
+
+    const seenNameId = seenNames.get(nameKey);
+    if (seenNameId && seenNameId !== studentId) {
+      summary.duplicateNameCsv += 1;
+      rows.push({
+        rowNo,
+        studentId: candidate.studentId,
+        name: candidate.name,
+        statusType: "duplicate_name_csv",
+        selectable: false,
+        defaultChecked: false,
+        candidate,
+      });
+      return;
+    }
+
+    const matchedByName = nameKey ? existingByName.get(nameKey) : null;
+    if (matchedByName) {
+      const existingId = String(matchedByName.studentId ?? "").trim();
+      if (existingId && existingId !== studentId) {
+        summary.duplicateNameExisting += 1;
+        rows.push({
+          rowNo,
+          studentId: candidate.studentId,
+          name: candidate.name,
+          statusType: "duplicate_name_existing",
+          selectable: true,
+          defaultChecked: false,
+          actionDefault: "skip",
+          existingStudentId: existingId,
+          candidate,
+        });
+        seenIds.add(studentId);
+        if (nameKey) seenNames.set(nameKey, studentId);
+        return;
+      }
+    }
+
+    summary.newCount += 1;
+    rows.push({
+      rowNo,
+      studentId: candidate.studentId,
+      name: candidate.name,
+      statusType: "new",
+      selectable: true,
+      defaultChecked: true,
+      actionDefault: "import",
+      candidate,
+    });
+    seenIds.add(studentId);
+    if (nameKey) seenNames.set(nameKey, studentId);
+  });
+
+  return { rows, summary, existingById };
 }
 
 export function initStudentImport({ onDataChanged } = {}) {
-  const elYear = document.getElementById("studentIntakeYear");
-  const elMonth = document.getElementById("studentIntakeMonth");
   const elFile = document.getElementById("studentCsvFile");
   const btnImport = document.getElementById("btnImportStudents");
   const elLog = document.getElementById("studentImportLog");
+  const elPreviewModal = document.getElementById("studentImportPreviewModal");
+  const elPreviewBody = document.getElementById("studentImportPreviewBody");
+  const elPreviewTable = document.getElementById("studentImportPreviewTable");
+  const elPreviewEmpty = document.getElementById("studentImportPreviewEmpty");
+  const elPreviewCount = document.getElementById("studentImportPreviewCount");
+  const btnClosePreview = document.getElementById("btnCloseStudentImportPreview");
+  const btnSelectAllPreview = document.getElementById("btnSelectAllStudentImportPreview");
+  const btnSelectNonePreview = document.getElementById("btnSelectNoneStudentImportPreview");
+  const btnConfirmPreview = document.getElementById("btnConfirmStudentImportPreview");
+
+  let previewCache = null;
+
+  const closePreview = () => {
+    if (!elPreviewModal) return;
+    elPreviewModal.classList.remove("active");
+    elPreviewModal.setAttribute("aria-hidden", "true");
+  };
+
+  const openPreview = () => {
+    if (!elPreviewModal) return;
+    elPreviewModal.classList.add("active");
+    elPreviewModal.setAttribute("aria-hidden", "false");
+  };
+
+  const renderPreview = (preview) => {
+    if (!elPreviewBody || !elPreviewTable || !elPreviewEmpty || !elPreviewCount) return;
+    const rows = preview?.rows ?? [];
+    const actionableCount = rows.filter((row) => row.selectable).length;
+    elPreviewCount.textContent = String(actionableCount);
+    elPreviewBody.textContent = "";
+
+    if (!rows.length) {
+      elPreviewEmpty.style.display = "block";
+      elPreviewTable.style.display = "none";
+      return;
+    }
+
+    elPreviewEmpty.style.display = "none";
+    elPreviewTable.style.display = "table";
+
+    rows.forEach((row, index) => {
+      const tr = document.createElement("tr");
+      const tdCheck = document.createElement("td");
+      let rowCheckbox = null;
+      if (row.selectable) {
+        rowCheckbox = document.createElement("input");
+        rowCheckbox.type = "checkbox";
+        rowCheckbox.checked = row.defaultChecked === true;
+        rowCheckbox.dataset.rowIndex = String(index);
+        tdCheck.appendChild(rowCheckbox);
+      } else {
+        tdCheck.textContent = "-";
+      }
+      tr.appendChild(tdCheck);
+
+      const tdRow = document.createElement("td");
+      tdRow.textContent = String(row.rowNo ?? "-");
+      tr.appendChild(tdRow);
+
+      const tdId = document.createElement("td");
+      tdId.textContent = row.studentId || "-";
+      tr.appendChild(tdId);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = row.name || "-";
+      tr.appendChild(tdName);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.textContent = toDisplayStatus(row);
+      tr.appendChild(tdStatus);
+
+      const tdAction = document.createElement("td");
+      if (row.statusType === "duplicate_name_existing") {
+        const select = document.createElement("select");
+        select.className = "preview-action-select";
+        select.dataset.rowIndex = String(index);
+        const optSkip = document.createElement("option");
+        optSkip.value = "skip";
+        optSkip.textContent = "Skip";
+        const optUpdate = document.createElement("option");
+        optUpdate.value = "update";
+        optUpdate.textContent = `Update existing (${row.existingStudentId})`;
+        select.appendChild(optSkip);
+        select.appendChild(optUpdate);
+        select.value = row.actionDefault ?? "skip";
+        select.addEventListener("change", () => {
+          if (select.value === "update" && rowCheckbox) rowCheckbox.checked = true;
+        });
+        tdAction.appendChild(select);
+      } else if (row.statusType === "new") {
+        tdAction.textContent = "Import";
+      } else {
+        tdAction.textContent = "Skip";
+      }
+      tr.appendChild(tdAction);
+
+      elPreviewBody.appendChild(tr);
+    });
+  };
 
   if (!btnImport) return;
 
   btnImport.addEventListener("click", async () => {
     if (elLog) elLog.textContent = "";
     try {
-      const year = String(elYear?.value ?? "").trim();
-      const month = String(elMonth?.value ?? "").trim();
-      const intake = validateIntake(year, month);
       const file = elFile?.files?.[0];
       if (!file) throw new Error("No CSV file selected.");
 
@@ -88,48 +343,147 @@ export function initStudentImport({ onDataChanged } = {}) {
       }
 
       const existing = await getAllRecords(STORES.students);
-      const existingIds = new Set(
-        existing.map((s) => String(s.studentId ?? "").trim()).filter(Boolean)
-      );
-      const seenIds = new Set();
-      const newStudents = [];
-      const duplicateIds = [];
-      let missingRequired = 0;
-
-      for (const row of parsed.data) {
-        const normalized = normalizeStudentRow(row, intake, year, month);
-        if (!normalized) {
-          missingRequired += 1;
-          continue;
-        }
-        const id = String(normalized.studentId).trim();
-        if (seenIds.has(id) || existingIds.has(id)) {
-          duplicateIds.push(id);
-          continue;
-        }
-        seenIds.add(id);
-        newStudents.push(normalized);
-      }
-
-      appendLog(elLog, `Intake set: ${intake}`);
-      appendLog(elLog, `Rows read: ${parsed.data.length}`);
-      appendLog(elLog, `New students: ${newStudents.length}`);
-      appendLog(elLog, `Skipped missing required fields: ${missingRequired}`);
-      appendLog(elLog, `Duplicates skipped: ${duplicateIds.length}`);
-      if (duplicateIds.length) {
-        appendLog(elLog, "Duplicate Student IDs (first 10):");
-        duplicateIds.slice(0, 10).forEach((id) => appendLog(elLog, `- ${id}`));
-      }
-
-      if (newStudents.length) {
-        await upsertMany(STORES.students, newStudents);
-        appendLog(elLog, "Student import complete.");
-        if (onDataChanged) await onDataChanged();
-      } else {
-        appendLog(elLog, "No new students to import.");
-      }
+      const preview = buildStudentImportPreview({
+        parsedRows: parsed.data,
+        existingStudents: existing,
+      });
+      previewCache = {
+        fileName: file.name,
+        preview,
+      };
+      appendLog(elLog, `Rows read: ${preview.summary.totalRows}`);
+      appendLog(elLog, `New rows detected: ${preview.summary.newCount}`);
+      appendLog(elLog, `Duplicate name (existing ID mismatch): ${preview.summary.duplicateNameExisting}`);
+      appendLog(elLog, "Review the preview popup and confirm which rows to import.");
+      renderPreview(preview);
+      openPreview();
     } catch (e) {
       appendLog(elLog, `ERROR: ${e.message ?? e}`);
     }
   });
+
+  if (btnSelectAllPreview) {
+    btnSelectAllPreview.addEventListener("click", () => {
+      elPreviewBody?.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+        if (!cb.disabled) cb.checked = true;
+      });
+    });
+  }
+
+  if (btnSelectNonePreview) {
+    btnSelectNonePreview.addEventListener("click", () => {
+      elPreviewBody?.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+        cb.checked = false;
+      });
+    });
+  }
+
+  if (btnConfirmPreview) {
+    btnConfirmPreview.addEventListener("click", async () => {
+      if (!previewCache?.preview?.rows?.length) return;
+      try {
+        const rows = previewCache.preview.rows;
+        const existingById = previewCache.preview.existingById;
+        const toInsert = [];
+        const toUpdateById = new Map();
+        let selectedRows = 0;
+        let skippedConflicts = 0;
+
+        for (let index = 0; index < rows.length; index += 1) {
+          const row = rows[index];
+          if (!row.selectable) continue;
+          const checkbox = elPreviewBody?.querySelector(`input[type='checkbox'][data-row-index='${index}']`);
+          if (!checkbox?.checked) continue;
+          selectedRows += 1;
+
+          if (row.statusType === "new") {
+            if (row.candidate) toInsert.push(row.candidate);
+            continue;
+          }
+
+          if (row.statusType === "duplicate_name_existing") {
+            const actionEl = elPreviewBody?.querySelector(`select[data-row-index='${index}']`);
+            const action = String(actionEl?.value ?? "skip");
+            if (action !== "update") {
+              skippedConflicts += 1;
+              continue;
+            }
+            const existingStudent = existingById.get(String(row.existingStudentId ?? "").trim());
+            if (!existingStudent || !row.candidate) {
+              skippedConflicts += 1;
+              continue;
+            }
+            toUpdateById.set(existingStudent.studentId, {
+              ...existingStudent,
+              name: row.candidate.name || existingStudent.name,
+              ic: row.candidate.ic || existingStudent.ic || "",
+              intake: row.candidate.intake,
+              intakeYear: row.candidate.intakeYear,
+              intakeMonth: row.candidate.intakeMonth,
+            });
+            continue;
+          }
+        }
+
+        const toUpdate = [...toUpdateById.values()];
+        if (!selectedRows) {
+          appendLog(elLog, "No rows selected.");
+          return;
+        }
+
+        if (toUpdate.length) {
+          const ok = window.confirm(
+            `Update ${toUpdate.length} existing student record(s) where name matched but CSV ID was different?`
+          );
+          if (!ok) {
+            appendLog(elLog, "Student import update step cancelled.");
+            return;
+          }
+        }
+
+        if (toInsert.length) await upsertMany(STORES.students, toInsert);
+        if (toUpdate.length) await upsertMany(STORES.students, toUpdate);
+
+        appendLog(elLog, `Rows selected: ${selectedRows}`);
+        appendLog(elLog, `Imported new students: ${toInsert.length}`);
+        appendLog(elLog, `Updated existing students: ${toUpdate.length}`);
+        appendLog(elLog, `Skipped selected conflicts: ${skippedConflicts}`);
+        appendLog(
+          elLog,
+          `Auto-skipped duplicates/missing: ${
+            previewCache.preview.summary.duplicateIdExisting
+            + previewCache.preview.summary.duplicateIdCsv
+            + previewCache.preview.summary.duplicateNameCsv
+            + previewCache.preview.summary.missingRequired
+          }`
+        );
+
+        if (!toInsert.length && !toUpdate.length) {
+          appendLog(elLog, "No changes were applied.");
+        } else {
+          appendLog(elLog, "Student import complete.");
+          if (onDataChanged) await onDataChanged();
+        }
+
+        previewCache = null;
+        closePreview();
+      } catch (e) {
+        appendLog(elLog, `ERROR: ${e.message ?? e}`);
+      }
+    });
+  }
+
+  if (btnClosePreview) {
+    btnClosePreview.addEventListener("click", () => {
+      closePreview();
+    });
+  }
+
+  if (elPreviewModal) {
+    elPreviewModal.addEventListener("click", (event) => {
+      if (event.target === elPreviewModal) {
+        closePreview();
+      }
+    });
+  }
 }

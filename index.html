@@ -146,6 +146,14 @@
         display: block;
       }
 
+      .enrollment-subtab-panel {
+        display: none;
+      }
+
+      .enrollment-subtab-panel.active {
+        display: block;
+      }
+
       .card {
         background: var(--surface);
         border-radius: var(--radius);
@@ -208,6 +216,14 @@
         border-radius: 10px;
         font-size: 12px;
         color: var(--muted);
+      }
+
+      .chip.new-tag {
+        background: rgba(15, 118, 110, 0.12);
+        border-color: rgba(15, 118, 110, 0.35);
+        color: var(--accent-2);
+        font-weight: 600;
+        margin-left: 8px;
       }
 
       .import-row {
@@ -341,6 +357,14 @@
         background: #fff;
       }
 
+      .preview-action-select {
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        background: #fff;
+      }
+
       .form-actions {
         display: flex;
         flex-wrap: wrap;
@@ -409,6 +433,89 @@
 
       .link-button:hover {
         text-decoration: underline;
+      }
+
+      .student-inline-row td {
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .inline-editor {
+        margin: 8px 0 16px;
+        padding: 14px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+      }
+
+      .result-inline-row td {
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .result-inline-panel {
+        margin: 8px 0 16px;
+        padding: 14px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+      }
+
+      .result-inline-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .result-inline-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .result-inline-table {
+        font-size: 13px;
+        table-layout: fixed;
+        width: 100%;
+      }
+
+      .result-inline-table th {
+        font-size: 11px;
+      }
+
+      .result-inline-table th,
+      .result-inline-table td {
+        text-align: left;
+      }
+
+      .result-inline-table th:nth-child(3),
+      .result-inline-table td:nth-child(3) {
+        text-align: right;
+        padding-right: 4px;
+      }
+
+      .result-inline-table th:nth-child(4),
+      .result-inline-table td:nth-child(4) {
+        text-align: center;
+      }
+
+      .result-inline-table th:nth-child(6),
+      .result-inline-table td:nth-child(6) {
+        text-align: right;
+      }
+
+      .result-inline-section {
+        margin-top: 10px;
+      }
+
+      .result-inline-section h4 {
+        margin: 8px 0;
+        font-size: 13px;
       }
 
       .mark-input {
@@ -494,14 +601,33 @@
         color: var(--muted);
       }
 
+      .enrollment-key-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+      }
+
+      .enrollment-top-actions {
+        margin-top: 8px;
+      }
+
+      .enrollment-key-bulk-actions {
+        margin-top: 8px;
+      }
+
       .enrollment-key-btn {
-        justify-self: start;
         padding: 4px 8px;
         border-radius: 999px;
         border: 1px solid var(--border);
         background: var(--surface-2);
         font-size: 11px;
         cursor: pointer;
+      }
+
+      .enrollment-key-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       .enrollment-course-item.selected .enrollment-key-label,
@@ -531,6 +657,205 @@
 
       .enrollment-course-item.selected span {
         color: rgba(255, 255, 255, 0.86);
+      }
+
+      .enrollment-course-item.priority {
+        border-color: #f97316;
+        background: #fff7ed;
+        color: #9a3412;
+      }
+
+      .enrollment-course-item.priority.selected {
+        background: linear-gradient(120deg, #f97316, #ea580c);
+        border-color: #f97316;
+        color: #fff;
+      }
+
+      .enrollment-course-item.priority .enrollment-key-label,
+      .enrollment-course-item.priority .enrollment-key-btn {
+        color: #9a3412;
+        border-color: rgba(249, 115, 22, 0.45);
+        background: rgba(249, 115, 22, 0.12);
+      }
+
+      .enrollment-course-item.priority.selected .enrollment-key-label,
+      .enrollment-course-item.priority.selected .enrollment-key-btn {
+        color: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .enrollment-custom-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .enrollment-custom-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+      }
+
+      .enrollment-custom-item label {
+        display: grid;
+        gap: 4px;
+        cursor: pointer;
+      }
+
+      .enrollment-custom-item strong {
+        font-size: 13px;
+      }
+
+      .enrollment-custom-item .muted {
+        margin: 0;
+      }
+
+      .enrollment-inline-row td {
+        padding: 0;
+        border-bottom: none;
+      }
+
+      .enrollment-inline-panel {
+        margin: 8px 0 16px;
+        padding: 14px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+      }
+
+      .enrollment-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .enrollment-grid-col {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+
+      .enrollment-grid-header {
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .enrollment-chip-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .enrollment-chip {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: #fff;
+        display: grid;
+        gap: 2px;
+      }
+
+      .enrollment-chip.compact {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+      }
+
+      .enrollment-grid-col.passed {
+        background: rgba(22, 163, 74, 0.08);
+        border-color: rgba(22, 163, 74, 0.35);
+      }
+
+      .enrollment-grid-col.enrolled {
+        background: rgba(14, 116, 144, 0.08);
+        border-color: rgba(14, 116, 144, 0.35);
+      }
+
+      .enrollment-grid-col.pending {
+        background: rgba(234, 88, 12, 0.08);
+        border-color: rgba(234, 88, 12, 0.35);
+      }
+
+      .filter-chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .filter-chip {
+        border: 1px solid var(--border);
+        background: #fff;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .filter-chip.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+
+      .flag-tag {
+        background: #fee2e2;
+        color: #b42318;
+        border: 1px solid rgba(180, 35, 24, 0.35);
+        margin-left: 6px;
+      }
+
+      .lock-tag {
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        border: 1px solid rgba(29, 78, 216, 0.35);
+        margin-left: 6px;
+      }
+
+      .inline-toggle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 6px;
+        font-size: 12px;
+      }
+
+      .inline-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .enrollment-course-grid.disabled {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      .enrollment-chip strong {
+        font-size: 12px;
+      }
+
+      .enrollment-chip span {
+        font-size: 12px;
+      }
+
+      .enrollment-chip.compact span {
+        display: none;
+      }
+
+      @media (max-width: 720px) {
+        .enrollment-custom-list {
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+
+        .enrollment-grid {
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
       }
 
       .enrollment-layout {
@@ -565,6 +890,37 @@
         justify-content: flex-end;
         gap: 10px;
         margin-bottom: 12px;
+      }
+
+      .slip-indicators {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .slip-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .slip-indicator .label {
+        display: none;
+      }
+
+      .slip-indicator:hover .label {
+        display: inline;
+      }
+
+      .slip-indicator.lock {
+        color: #1d4ed8;
+      }
+
+      .slip-indicator.flag {
+        color: #b42318;
       }
 
       .slip-brand {
@@ -673,6 +1029,45 @@
         margin-bottom: 16px;
       }
 
+      .drawer {
+        position: fixed;
+        inset: 0;
+        display: none;
+        justify-content: flex-end;
+        background: rgba(28, 27, 31, 0.5);
+        z-index: 1100;
+      }
+
+      .drawer.active {
+        display: flex;
+      }
+
+      .drawer-panel {
+        width: min(420px, 92vw);
+        height: 100%;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .drawer-section {
+        margin-bottom: 16px;
+      }
+
+      .drawer-section h4 {
+        margin: 0 0 8px;
+      }
+
       @media print {
         @page {
           size: A4 portrait;
@@ -694,7 +1089,9 @@
         #panel-enrollment,
         #panel-results,
         #courseCoverageModal,
+        #studentProfileDrawer,
         #resultPreviewModal,
+        #studentImportPreviewModal,
         #studentEditModal,
         #markEditModal {
           display: none !important;
@@ -729,6 +1126,10 @@
           width: 100%;
         }
 
+        .slip-indicator .label {
+          display: inline;
+        }
+
         .slip {
           box-shadow: none;
           border: none;
@@ -752,14 +1153,18 @@
           font-size: 11px;
         }
 
-        .slip-actions,
-        .modal-header .form-actions {
-          display: none;
-        }
+          .slip-actions,
+          .modal-header .form-actions {
+            display: none;
+          }
 
-        .slip-section {
-          margin-top: 10px;
-        }
+          #enrollmentCustomSection {
+            display: none;
+          }
+
+          .slip-section {
+            margin-top: 10px;
+          }
 
         .slip-disclaimer {
           font-size: 10px;
@@ -857,6 +1262,9 @@
         </button>
         <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="enrollment">
           Enrollment
+        </button>
+        <button class="tab-btn" type="button" role="tab" aria-selected="false" data-tab="reporting">
+          Reporting
         </button>
       </nav>
 
@@ -1024,23 +1432,13 @@
               <span class="chip">Bulk Register</span>
             </div>
             <div class="import-row">
-              <select id="studentIntakeYear" aria-label="Intake year">
-                <option value="">Year</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-                <option value="2027">2027</option>
-              </select>
-              <select id="studentIntakeMonth" aria-label="Intake month">
-                <option value="">Month</option>
-                <option value="02">02</option>
-                <option value="09">09</option>
-              </select>
-              <input type="file" id="studentCsvFile" accept=".csv" />
-              <button class="btn" id="btnImportStudents">Import</button>
-            </div>
-            <p class="muted">
-              Required columns: StudentID, Name. Optional: IC. Intake is set from the selected year/month.
+                <input type="file" id="studentCsvFile" accept=".csv" />
+                <button class="btn" id="btnImportStudents">Import</button>
+              </div>
+              <p class="muted">
+                Required columns: StudentID, Name, Intake (YYYY/MM). Optional: IC.
+                Import opens a preview popup to confirm New / Duplicate rows and choose Update or Skip for
+              duplicate-name conflicts.
             </p>
             <div class="muted">
               Example template: <a href="./example-students.csv" download>Download example-students.csv</a>
@@ -1075,7 +1473,7 @@
               <button class="btn" id="btnUploadNewResults">Upload</button>
             </div>
             <p class="muted">
-              Expected columns: Student ID, Full Name, Mark. Session format is YYYY-MM (month 02 or 09).
+              Expected columns: Student ID, Full Name, Mark. Session format is YYYY/MM (month 02 or 09).
             </p>
             <div class="muted">
               Example template: <a href="./example.csv" download>Download example.csv</a>
@@ -1133,34 +1531,59 @@
       <section class="tab-panel" id="panel-students" role="tabpanel">
         <div class="grid">
           <div class="card fade-up delay-2" style="grid-column: span 12;">
-            <div class="card-title">
-              <h2>Student List</h2>
-              <span class="chip">Slip Access</span>
+              <div class="card-title">
+                <h2>Student List</h2>
+                <span class="chip">Slip Access</span>
+              </div>
+              <div class="form-actions" style="margin-bottom: 12px;">
+                <button class="btn secondary small" type="button" id="btnConfirmResultSlips">
+                  Confirm Result Slips
+                </button>
+                <span class="chip" id="resultSlipConfirmStatus">Result: Not confirmed</span>
+                <button class="btn secondary small" type="button" id="btnConfirmEnrollmentSlips">
+                  Confirm Enrollment Slips
+                </button>
+                <span class="chip" id="enrollmentSlipConfirmStatus">Enrollment: Not confirmed</span>
+              </div>
+              <div class="filter-row" style="margin-bottom: 12px;">
+                <div class="field field-wide">
+                  <label for="studentListSearch">Search</label>
+                  <input id="studentListSearch" type="search" placeholder="Search by Student ID or Name" />
+                </div>
+                <div class="field">
+                  <label for="studentListIntake">Intake</label>
+                  <select id="studentListIntake">
+                    <option value="">All intakes</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="studentListStatus">Status</label>
+                  <select id="studentListStatus">
+                    <option value="">All statuses</option>
+                    <option value="new">New only</option>
+                    <option value="has-results">Has results</option>
+                  </select>
+                </div>
+              </div>
+              <div id="studentListEmpty" class="empty">No students yet. Import results or students to begin.</div>
+              <table id="studentListTable" style="display: none; margin-top: 12px;">
+                <thead>
+                  <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="studentListBody"></tbody>
+              </table>
+              <div class="form-actions" id="studentListPager" style="display: none; margin-top: 12px;">
+                <button class="btn secondary small" type="button" id="btnStudentListPrev">Previous</button>
+                <span class="muted" id="studentListPageMeta">Page 1 of 1</span>
+                <button class="btn secondary small" type="button" id="btnStudentListNext">Next</button>
+              </div>
             </div>
-            <div class="form-actions" style="margin-bottom: 12px;">
-              <button class="btn secondary small" type="button" id="btnConfirmResultSlips">
-                Confirm Result Slips
-              </button>
-              <span class="chip" id="resultSlipConfirmStatus">Result: Not confirmed</span>
-              <button class="btn secondary small" type="button" id="btnConfirmEnrollmentSlips">
-                Confirm Enrollment Slips
-              </button>
-              <span class="chip" id="enrollmentSlipConfirmStatus">Enrollment: Not confirmed</span>
-            </div>
-            <div id="studentListEmpty" class="empty">No students yet. Import results or students to begin.</div>
-            <table id="studentListTable" style="display: none; margin-top: 12px;">
-              <thead>
-                <tr>
-                  <th>Student ID</th>
-                  <th>Name</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="studentListBody"></tbody>
-            </table>
           </div>
-        </div>
-      </section>
+        </section>
 
       <section class="tab-panel" id="panel-results" role="tabpanel">
         <div class="tabs" role="tablist" aria-label="Results subtabs">
@@ -1334,63 +1757,230 @@
       </section>
 
       <section class="tab-panel" id="panel-enrollment" role="tabpanel">
-        <div class="grid">
-          <div class="card fade-up delay-1" style="grid-column: span 12;">
-            <div class="card-title">
-              <h2>Next Semester Offerings</h2>
-              <span class="chip" id="enrollmentSelectedCount">0 selected</span>
-            </div>
-            <p class="muted">
-              Select offered courses. Each student slip will include only courses not yet passed.
-              Remarks: <strong>New</strong> (never attempted), <strong>Repeat</strong> (attempted but not passed).
-            </p>
-            <div class="import-row">
-              <div id="enrollmentCourseGrid" class="enrollment-course-grid"></div>
-            </div>
+          <div class="tabs" role="tablist" aria-label="Enrollment subtabs">
+            <button class="tab-btn active enrollment-subtab-btn" type="button" role="tab" aria-selected="true" data-enrollment-subtab="listing">
+              Enrollment List
+            </button>
+            <button class="tab-btn enrollment-subtab-btn" type="button" role="tab" aria-selected="false" data-enrollment-subtab="stats">
+              Enrollment Stats
+            </button>
+            <button class="tab-btn enrollment-subtab-btn" type="button" role="tab" aria-selected="false" data-enrollment-subtab="flags">
+              Red Flags
+            </button>
+          </div>
+          <div class="enrollment-subtab-panel active" id="enrollment-subtab-listing">
+            <div class="grid">
+              <div class="card fade-up delay-1" style="grid-column: span 12;">
+              <div class="card-title">
+                <h2>Next Semester Offerings</h2>
+                <span class="chip" id="enrollmentSelectedCount">0 selected</span>
+              </div>
+              <p class="muted">
+                Select offered courses. Each student slip will include only courses not yet passed.
+                Remarks: <strong>New</strong> (never attempted), <strong>Repeat</strong> (attempted but not passed).
+              </p>
+              <p class="muted">Enrollment keys support manual edit and auto-generated 10-digit keys.</p>
+              <div class="filter-row" style="margin-bottom: 12px;">
+                <div class="field field-wide">
+                  <label>Target Students</label>
+                  <div class="filter-chip-group" id="enrollmentTargetModeButtons">
+                    <button class="filter-chip active" type="button" id="enrollmentTargetAll" data-mode="all">All students</button>
+                    <button class="filter-chip" type="button" id="enrollmentTargetIntakesMode" data-mode="groups">Specific groups</button>
+                  </div>
+                </div>
+                <div class="field field-wide">
+                  <label for="enrollmentTargetIntakes">Select Groups</label>
+                  <select id="enrollmentTargetIntakes" multiple size="4"></select>
+                  <div class="muted" id="enrollmentTargetHint">Select at least one group to enable course selection.</div>
+                </div>
+              </div>
+              <div class="filter-row" style="margin-bottom: 12px;">
+                <div class="field field-wide">
+                  <label>Slip Locking</label>
+                  <div class="form-actions" style="justify-content: flex-start; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn secondary small" type="button" id="btnEnrollmentLockGroups">Lock Selected Groups</button>
+                    <button class="btn secondary small" type="button" id="btnEnrollmentUnlockGroups">Unlock Selected Groups</button>
+                    <label class="inline-toggle" style="margin: 0;">
+                      <input type="checkbox" id="enrollmentForceRebuildLocked" />
+                      <span>Force rebuild locked slips</span>
+                    </label>
+                  </div>
+                  <div class="muted" id="enrollmentLockHint">
+                    Locked slips will not be reshuffled unless force rebuild is enabled.
+                  </div>
+                </div>
+              </div>
+              <div class="filter-row" style="margin-bottom: 12px;">
+                <div class="field">
+                  <label for="enrollmentMaxPerStudent">Max Courses / Student</label>
+                  <input id="enrollmentMaxPerStudent" type="number" min="1" max="15" value="6" />
+                </div>
+                <div class="field field-wide">
+                  <label>Priority Courses</label>
+                  <div class="muted">
+                    Mark priority directly on the course tiles. Earlier intake students are assigned first.
+                  </div>
+                </div>
+              </div>
+              <div class="import-row">
+                <div id="enrollmentCourseGrid" class="enrollment-course-grid"></div>
+              </div>
             <div class="muted">Minimum 1 and maximum 15 offered courses per build.</div>
-            <div class="form-actions">
-              <button class="btn secondary small" type="button" id="btnEnrollmentSelectAll">Select all</button>
-              <button class="btn secondary small" type="button" id="btnEnrollmentClearAll">Clear</button>
-              <button class="btn small" type="button" id="btnEnrollmentBuild">Build Slips</button>
-              <button class="btn secondary small" type="button" id="btnEnrollmentBulkPrint">Bulk Export (ZIP HTML)</button>
+              <div class="form-actions enrollment-top-actions">
+                <button class="btn secondary small" type="button" id="btnEnrollmentSelectAll">Select all</button>
+                <button class="btn secondary small" type="button" id="btnEnrollmentClearAll">Clear</button>
+                <button class="btn small" type="button" id="btnEnrollmentBuild">Build Slips</button>
+                <button class="btn secondary small" type="button" id="btnEnrollmentBulkPrint">Bulk Export (ZIP HTML)</button>
+              </div>
+            <div class="form-actions enrollment-key-bulk-actions">
+              <button class="btn secondary small" type="button" id="btnEnrollmentGenerateAllKeys">Generate All Keys</button>
+              <button class="btn secondary small" type="button" id="btnEnrollmentResetAllKeys">Reset All Keys</button>
             </div>
             <pre id="enrollmentBulkLog" aria-live="polite"></pre>
           </div>
 
-          <div class="enrollment-layout" style="grid-column: span 12;">
-            <div class="card enrollment-list-card fade-up delay-2">
-              <div class="card-title">
-                <h2>Student Enrollment List</h2>
-                <span class="chip" id="enrollmentStudentCount">0</span>
-              </div>
-              <div class="filter-row">
-                <div class="field field-wide">
-                  <label for="enrollmentSearch">Search</label>
-                  <input id="enrollmentSearch" type="text" placeholder="Search by student name or ID" />
+              <div class="enrollment-layout" style="grid-column: span 12;">
+                <div class="card enrollment-list-card fade-up delay-2">
+                  <div class="card-title">
+                    <h2>Student Enrollment List</h2>
+                    <span class="chip" id="enrollmentStudentCount">0</span>
+                  </div>
+                    <div class="filter-row">
+                      <div class="field field-wide">
+                        <label for="enrollmentSearch">Search</label>
+                        <input id="enrollmentSearch" type="text" placeholder="Search by student name or ID" />
+                      </div>
+                      <div class="field">
+                        <label for="enrollmentListIntake">Intake</label>
+                        <select id="enrollmentListIntake"></select>
+                      </div>
+                      <div class="field field-wide">
+                        <label>Filter by enrolled course</label>
+                        <div id="enrollmentCourseFilterButtons" class="filter-chip-group"></div>
+                        <div class="muted" id="enrollmentCourseFilterHint">Click to toggle courses.</div>
+                        <div class="muted" id="enrollmentCourseFilterEmpty" style="display: none;">
+                          No offered courses selected.
+                        </div>
+                      </div>
+                    </div>
+                  <div id="enrollmentListEmpty" class="empty" style="margin-top: 12px;">No slips generated yet.</div>
+                  <table id="enrollmentListTable" style="display: none;">
+                    <thead>
+                      <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Intake</th>
+                        <th>Current Semester</th>
+                        <th>Progress (90 Credits)</th>
+                        <th>To Enroll</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="enrollmentListBody"></tbody>
+                  </table>
+                  <div class="form-actions" id="enrollmentPager" style="display: none; margin-top: 12px;">
+                    <button class="btn secondary small" type="button" id="btnEnrollmentPrev">Previous</button>
+                    <span class="muted" id="enrollmentPageMeta">Page 1 of 1</span>
+                    <button class="btn secondary small" type="button" id="btnEnrollmentNext">Next</button>
+                  </div>
                 </div>
               </div>
-              <div id="enrollmentListEmpty" class="empty" style="margin-top: 12px;">No slips generated yet.</div>
-              <table id="enrollmentListTable" style="display: none;">
-                <thead>
-                  <tr>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Intake</th>
-                    <th>Current Semester</th>
-                    <th>Progress (90 Credits)</th>
-                    <th>To Enroll</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="enrollmentListBody"></tbody>
-              </table>
-              <div class="form-actions" id="enrollmentPager" style="display: none; margin-top: 12px;">
-                <button class="btn secondary small" type="button" id="btnEnrollmentPrev">Previous</button>
-                <span class="muted" id="enrollmentPageMeta">Page 1 of 1</span>
-                <button class="btn secondary small" type="button" id="btnEnrollmentNext">Next</button>
+            </div>
+          </div>
+          <div class="enrollment-subtab-panel" id="enrollment-subtab-stats">
+            <div class="grid">
+              <div class="card fade-up delay-2" style="grid-column: span 12;">
+                <div class="card-title">
+                  <h2>Enrollment Stats</h2>
+                  <div class="header-actions">
+                    <span class="chip" id="enrollmentStatsCourseCount">Courses: 0</span>
+                    <span class="chip" id="enrollmentStatsStudentCount">Students: 0</span>
+                  </div>
+                </div>
+                <div id="enrollmentStatsEmpty" class="empty" style="margin-top: 12px;">Build slips to see enrollment counts.</div>
+                <table id="enrollmentStatsTable" style="display: none; margin-top: 12px;">
+                  <thead>
+                    <tr>
+                      <th>Course Code</th>
+                      <th>Title</th>
+                      <th>Students</th>
+                      <th>Repeat</th>
+                    </tr>
+                  </thead>
+                  <tbody id="enrollmentStatsBody"></tbody>
+                </table>
               </div>
             </div>
+          </div>
+          <div class="enrollment-subtab-panel" id="enrollment-subtab-flags">
+            <div class="grid">
+              <div class="card fade-up delay-2" style="grid-column: span 12;">
+                <div class="card-title">
+                  <h2>Red Flag Students</h2>
+                  <div class="header-actions">
+                    <span class="chip" id="enrollmentRedFlagCount">0</span>
+                  </div>
+                </div>
+                <div id="enrollmentRedFlagEmpty" class="empty" style="margin-top: 12px;">
+                  No red flag students detected.
+                </div>
+                <table id="enrollmentRedFlagTable" style="display: none; margin-top: 12px;">
+                  <thead>
+                    <tr>
+                      <th>Student ID</th>
+                      <th>Name</th>
+                      <th>Intake</th>
+                      <th>Failed/No Mark</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody id="enrollmentRedFlagBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+      </section>
+
+      <section class="tab-panel" id="panel-reporting" role="tabpanel">
+        <div class="grid">
+          <div class="card fade-up delay-1" style="grid-column: span 12;">
+            <div class="card-title">
+              <h2>Reporting</h2>
+              <span class="chip">CSV</span>
+            </div>
+            <div class="filter-row">
+              <div class="field">
+                <label for="reportType">Report</label>
+                <select id="reportType">
+                  <option value="students">Student List</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="reportIntake">Intake</label>
+                <select id="reportIntake"></select>
+              </div>
+              <div class="field field-wide">
+                <label for="reportCourse">Enrolled Course</label>
+                <select id="reportCourse"></select>
+                <div class="inline-toggle">
+                  <label><input type="checkbox" id="reportIncludeCurrent" checked /> Current enrollment</label>
+                  <label><input type="checkbox" id="reportIncludePast" checked /> Past results</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn" type="button" id="btnReportGenerate">Generate</button>
+              <button class="btn secondary" type="button" id="btnReportDownload" disabled>Download CSV</button>
+              <span class="muted" id="reportRowCount">0 rows</span>
+            </div>
+            <div id="reportPreviewEmpty" class="empty" style="margin-top: 12px;">
+              Generate a report to preview the data.
+            </div>
+            <table id="reportPreviewTable" style="display: none; margin-top: 12px;">
+              <thead id="reportPreviewHead"></thead>
+              <tbody id="reportPreviewBody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -1428,27 +2018,49 @@
     </div>
 
     <div class="modal" id="enrollmentSlipModal" aria-hidden="true">
-        <div class="modal-card">
+          <div class="modal-card">
           <div class="modal-header">
             <div>
               <h3 class="slip-title" style="margin: 0;">Enrollment Slip</h3>
               <div class="muted">Generated from selected offered courses.</div>
             </div>
             <div class="form-actions">
+              <button class="btn secondary" type="button" id="btnEnrollmentLockSlip">Lock Slip</button>
               <button class="btn secondary" type="button" id="btnPrintEnrollmentSlip">Print Slip</button>
               <button class="btn secondary" type="button" id="btnCloseEnrollmentSlip">Close</button>
             </div>
           </div>
-          <div id="enrollmentSlip" class="slip">
-            <div class="card-title">
-              <h2>Courses To Enroll</h2>
-              <span class="chip" id="enrollmentSlipCount">0 course(s)</span>
-            </div>
-            <div class="slip-meta" id="enrollmentSlipStudentMeta">--</div>
-        <table style="margin-top: 10px;">
-          <thead>
-            <tr>
-              <th>Course Code</th>
+            <div id="enrollmentSlip" class="slip">
+              <div class="card-title">
+                <h2>Courses To Enroll</h2>
+                <span class="chip" id="enrollmentSlipCount">0 course(s)</span>
+              </div>
+              <div class="slip-meta" id="enrollmentSlipStudentMeta">--</div>
+              <div class="card" id="enrollmentCustomSection" style="margin-top: 12px;">
+                <div class="card-title">
+                  <h2>Customize Enrollment</h2>
+                  <span class="chip" id="enrollmentCustomCount">0 selected</span>
+                </div>
+                <div class="muted" id="enrollmentCustomMeta">
+                  Select up to the max per student from offered courses only.
+                </div>
+                <div id="enrollmentCustomList" class="enrollment-custom-list"></div>
+                <div class="form-actions" style="margin-top: 10px;">
+                  <button class="btn secondary small" type="button" id="btnEnrollmentCustomSelectAll">
+                    Select all
+                  </button>
+                  <button class="btn secondary small" type="button" id="btnEnrollmentCustomClear">Clear</button>
+                  <button class="btn small" type="button" id="btnEnrollmentCustomSave">Save Custom</button>
+                  <button class="btn secondary small" type="button" id="btnEnrollmentCustomReset">
+                    Reset to Auto
+                  </button>
+                  <span class="muted" id="enrollmentCustomStatus"></span>
+                </div>
+              </div>
+          <table style="margin-top: 10px;">
+            <thead>
+              <tr>
+                <th>Course Code</th>
               <th>Title</th>
               <th>Enrollment Key</th>
               <th>Remark</th>
@@ -1456,6 +2068,11 @@
           </thead>
           <tbody id="enrollmentSlipBody"></tbody>
         </table>
+            <div class="slip-disclaimer">
+              <strong>Declaration:</strong> I confirm that I have reviewed the courses listed above.
+              Enrollment is subject to academic regulations, prerequisite checks, and final approval by
+              the institution.
+            </div>
           </div>
         </div>
       </div>
@@ -1525,6 +2142,41 @@
       </div>
     </div>
 
+    <div class="modal" id="studentImportPreviewModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Verify Student Import</h3>
+            <div class="muted">Select rows to import. Duplicate names are skipped unless explicitly updated.</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnCloseStudentImportPreview">Close</button>
+            <button class="btn secondary" type="button" id="btnSelectNoneStudentImportPreview">Select None</button>
+            <button class="btn secondary" type="button" id="btnSelectAllStudentImportPreview">Select All</button>
+            <button class="btn" type="button" id="btnConfirmStudentImportPreview">Confirm Import</button>
+          </div>
+        </div>
+        <div class="card-title">
+          <h2>Rows Detected</h2>
+          <span class="chip" id="studentImportPreviewCount">0</span>
+        </div>
+        <div id="studentImportPreviewEmpty" class="empty">No rows detected.</div>
+        <table id="studentImportPreviewTable" style="display: none;">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Row</th>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="studentImportPreviewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="modal" id="studentEditModal" aria-hidden="true">
       <div class="modal-card">
         <div class="modal-header">
@@ -1553,6 +2205,51 @@
           <div class="field">
             <label for="editStudentIntake">Intake</label>
             <input id="editStudentIntake" type="text" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer" id="studentProfileDrawer" aria-hidden="true">
+      <div class="drawer-panel">
+        <div class="drawer-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Student Profile</h3>
+            <div class="muted" id="studentProfileMeta">--</div>
+          </div>
+          <button class="btn secondary" type="button" id="btnCloseStudentProfile">Close</button>
+        </div>
+        <div id="studentProfileBody">
+          <div class="card drawer-section">
+            <h4>Personal Info</h4>
+            <div class="muted" id="studentProfileInfo">Select a student to view details.</div>
+          </div>
+          <div class="card drawer-section">
+            <h4>Result Summary</h4>
+            <div class="muted" id="studentProfileSummary">--</div>
+          </div>
+          <div class="drawer-section">
+            <div class="form-actions">
+              <button class="btn secondary small" type="button" id="btnProfileResultSlip">Result Slip</button>
+              <button class="btn secondary small" type="button" id="btnProfileEnrollmentSlip">Enrollment Slip</button>
+                <button class="btn secondary small" type="button" id="btnProfileEdit">Save</button>
+              <button class="btn secondary small" type="button" id="btnProfileDelete">Delete</button>
+            </div>
+            <div class="muted" id="studentProfileStatus" style="margin-top: 8px;">--</div>
+          </div>
+          <div class="card drawer-section">
+            <h4>Deleted Students</h4>
+            <div id="deletedStudentEmpty" class="empty">No deleted students.</div>
+            <table id="deletedStudentTable" style="display: none; margin-top: 8px;">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="deletedStudentBody"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1612,6 +2309,60 @@
         <label class="mark-edit-verify">
           <input type="checkbox" id="markEditVerify" />
           I verify this mark is correct before saving.
+        </label>
+      </div>
+    </div>
+
+    <div class="modal" id="addResultModal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="slip-title" style="margin: 0;">Add Result</h3>
+            <div class="muted">Create a new result entry for this student.</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn secondary" type="button" id="btnCloseAddResult">Close</button>
+            <button class="btn" type="button" id="btnConfirmAddResult" disabled>Save Result</button>
+          </div>
+        </div>
+        <div class="mark-edit-grid">
+          <div class="mark-edit-row">
+            <span>Student</span>
+            <strong id="addResultStudent">--</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Course</span>
+            <select id="addResultCourse" class="mark-edit-input"></select>
+          </div>
+          <div class="mark-edit-row">
+            <span>Session</span>
+            <input id="addResultSession" class="mark-edit-input" type="text" placeholder="YYYY/MM" />
+          </div>
+          <div class="mark-edit-row">
+            <span>Semester</span>
+            <input id="addResultSemester" class="mark-edit-input" type="number" min="1" step="1" />
+          </div>
+          <div class="mark-edit-row">
+            <span>Mark</span>
+            <input id="addResultMark" class="mark-edit-input" type="number" min="0" max="100" step="0.01" />
+          </div>
+          <div class="mark-edit-row">
+            <span>Letter</span>
+            <strong id="addResultLetter">-</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Point</span>
+            <strong id="addResultPoint">-</strong>
+          </div>
+          <div class="mark-edit-row">
+            <span>Status</span>
+            <strong id="addResultStatus">--</strong>
+          </div>
+        </div>
+        <div class="mark-edit-warning" id="addResultWarning" style="display: none;"></div>
+        <label class="mark-edit-verify">
+          <input type="checkbox" id="addResultVerify" />
+          I verify this result is correct before saving.
         </label>
       </div>
     </div>

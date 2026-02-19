@@ -75,7 +75,7 @@ export function initImports({ onDataChanged }) {
         const year = String(elNewResultYear?.value ?? "").trim();
         const month = String(elNewResultMonth?.value ?? "").trim();
         const courseCode = String(elNewResultCourse?.value ?? "").trim();
-        const session = year && month ? `${year}-${month}` : "";
+        const session = year && month ? `${year}/${month}` : "";
         const file = elNewResultFile?.files?.[0];
 
         const preview = await previewNewResults({ file, session, courseCode });
@@ -83,6 +83,25 @@ export function initImports({ onDataChanged }) {
 
         if (elPreviewCount) {
           elPreviewCount.textContent = String(preview.affectedStudents.length);
+        }
+        if (preview.missingNameNewStudents) {
+          appendLog(
+            elNewResultLog,
+            `WARNING: ${preview.missingNameNewStudents} new student(s) have no name in this file. Upload a student list CSV to fill names.`
+          );
+        }
+        if (preview.skippedMismatch) {
+          appendLog(
+            elNewResultLog,
+            `WARNING: ${preview.skippedMismatch} row(s) were blocked because ID+Name did not match existing student records.`
+          );
+          const mismatches = preview.mismatchedExisting ?? [];
+          mismatches.slice(0, 10).forEach((row) => {
+            appendLog(
+              elNewResultLog,
+              `- Row ${row.rowNo}: ${row.studentId} | existing="${row.existingName}" vs uploaded="${row.incomingName}"`
+            );
+          });
         }
 
         if (!preview.affectedStudents.length) {
@@ -145,7 +164,7 @@ export function initImports({ onDataChanged }) {
         const year = String(elNewResultYear?.value ?? "").trim();
         const month = String(elNewResultMonth?.value ?? "").trim();
         const courseCode = String(elNewResultCourse?.value ?? "").trim();
-        const session = year && month ? `${year}-${month}` : "";
+        const session = year && month ? `${year}/${month}` : "";
         const file = elNewResultFile?.files?.[0];
         if (previewCache?.session !== session || previewCache?.courseCode !== courseCode || previewCache?.file !== file) {
           previewCache = null;

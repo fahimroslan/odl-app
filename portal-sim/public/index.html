@@ -124,6 +124,16 @@
       let token = "";
       let currentUpdateId = 0;
 
+      const formatYearMonth = (value) => {
+        const raw = String(value ?? "").trim();
+        if (!raw) return "-";
+        const match = raw.match(/^(\d{4})[./-](\d{1,2})$/);
+        if (match) {
+          return `${match[1]}/${match[2].padStart(2, "0")}`;
+        }
+        return raw;
+      };
+
       document.getElementById("btnRequestOtp").addEventListener("click", async () => {
         loginLog.textContent = "Requesting OTP...";
         try {
@@ -219,7 +229,7 @@
 
         enrollmentSlip.innerHTML = `
           <div><strong>Program:</strong> ${enrollment.program}</div>
-          <div><strong>Intake:</strong> ${enrollment.intake}</div>
+          <div><strong>Intake:</strong> ${formatYearMonth(enrollment.intake)}</div>
           <div><strong>Current Semester:</strong> ${enrollment.currentSemester}</div>
           <div><strong>Status:</strong> ${enrollment.status}</div>
           <h4 style="margin: 14px 0 6px;">Courses Not Taken</h4>
@@ -248,7 +258,7 @@
               )
               .join("");
             return `
-              <h4>${term.session} - Semester ${term.semester}</h4>
+              <h4>${formatYearMonth(term.session)} - Semester ${term.semester}</h4>
               <div class="muted">GPA: ${term.gpa ? term.gpa.toFixed(2) : "--"}</div>
               <table>
                 <thead>

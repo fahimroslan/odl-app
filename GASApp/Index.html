@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root { --border:#e6e6e6; --text:#111; --muted:#666; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: #fff;
+        color: var(--text);
+      }
+      .page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      .card {
+        width: min(860px, 100%);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 22px;
+        background: #fff;
+      }
+      h1 { font-size: 18px; margin: 0 0 6px 0; }
+      .sub { margin: 0 0 18px 0; color: var(--muted); font-size: 13px; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 14px;
+        align-items: start;
+      }
+      @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+      label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px 0; }
+      input, select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        outline: none;
+      }
+      input:focus, select:focus { border-color:#cfcfcf; }
+
+      .help { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+      .suggest {
+        margin-top: 8px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .item {
+        padding: 10px 12px;
+        border-top: 1px solid var(--border);
+        cursor: pointer;
+        font-size: 14px;
+        background: #fff;
+      }
+      .item:first-child { border-top: 0; }
+      .item:hover { background: #fafafa; }
+
+      .selected {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fbfbfb;
+        font-size: 14px;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      button {
+        padding: 11px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #111;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .ghost { background: #fff; color: #111; }
+
+      .msg { margin-top: 12px; font-size: 13px; color: var(--muted); min-height: 18px; }
+
+      .openbox {
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      a { color: #111; }
+    </style>
+  </head>
+
+  <body>
+    <div class="page">
+      <div class="card">
+        <h1>Enrollment Slip Access</h1>
+        <p class="sub">Type your name, select it from suggestions, then verify with your Student ID.</p>
+
+        <div class="grid">
+          <!-- LEFT -->
+          <div>
+            <label>Full Name</label>
+            <input id="nameInput" placeholder='Example: "Ahmad Za"...' autocomplete="off" />
+            <div class="help" id="helpText">
+              Start typing your first name, then a space, then part of your next name (e.g., "Ahmad Za").
+            </div>
+
+            <div id="selectedBox" style="margin-top:10px; display:none;">
+              <label>Selected Name</label>
+              <div class="selected" id="selectedName"></div>
+            </div>
+
+            <div id="suggestBox" class="suggest" style="display:none;"></div>
+            <div id="noMatch" class="help" style="display:none;">No matching name found in the list.</div>
+
+            <div id="nameIssueBox" class="openbox" style="display:none;">
+              <div><strong>Can't find your name?</strong> Submit it for admin review.</div>
+              <label>Full Name (as in record)</label>
+              <input id="nameIssueInput" placeholder="Your full name" />
+              <label>Email / Phone</label>
+              <input id="nameIssueContact" placeholder="you@example.com or 555-123-4567" />
+              <button class="ghost" id="nameIssueBtn" onclick="submitNameIssue()">Submit Name Issue</button>
+              <div class="help" id="nameIssueMsg"></div>
+            </div>
+          </div>
+
+          <!-- RIGHT -->
+          <div>
+            <label>Student ID</label>
+            <input id="idInput" placeholder="Example: 2025.09.019.DBA.ODL" />
+
+            <div class="actions">
+              <button id="verifyBtn" disabled onclick="verify()">Verify & Open Slip</button>
+              <button class="ghost" onclick="resetAll()">Reset</button>
+            </div>
+
+            <div class="msg" id="msg"></div>
+
+            <div id="openBox" class="openbox" style="display:none;">
+              <div><strong>Ready:</strong> <span id="fileName"></span></div>
+              <div><a id="openLink" href="#" target="_blank">Open Enrollment Slip</a></div>
+              <div class="help">Link expires in a few minutes. If expired, verify again.</div>
+            </div>
+
+            <div id="noIdBox" class="openbox">
+              <div><strong>Need help?</strong> Submit a request and we will contact you.</div>
+              <label>Request Type</label>
+              <select id="noIdType">
+                <option value="NO_ID">No Student ID</option>
+                <option value="SLIP_NOT_RECEIVED">Slip Not Received</option>
+              </select>
+              <label>Full Name (as in record)</label>
+              <input id="noIdName" placeholder="Your full name" />
+              <label>Email / Phone</label>
+              <input id="noIdContact" placeholder="you@example.com or 555-123-4567" />
+              <button class="ghost" id="noIdBtn" onclick="submitNoId()">Submit Request</button>
+              <div class="help" id="noIdMsg"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const nameInput = document.getElementById("nameInput");
+      const idInput = document.getElementById("idInput");
+      const suggestBox = document.getElementById("suggestBox");
+      const selectedBox = document.getElementById("selectedBox");
+      const selectedNameEl = document.getElementById("selectedName");
+      const verifyBtn = document.getElementById("verifyBtn");
+      const msgEl = document.getElementById("msg");
+      const openBox = document.getElementById("openBox");
+      const openLink = document.getElementById("openLink");
+      const fileNameEl = document.getElementById("fileName");
+      const noMatchEl = document.getElementById("noMatch");
+      const nameIssueBox = document.getElementById("nameIssueBox");
+      const nameIssueInput = document.getElementById("nameIssueInput");
+      const nameIssueContact = document.getElementById("nameIssueContact");
+      const nameIssueMsg = document.getElementById("nameIssueMsg");
+      const noIdType = document.getElementById("noIdType");
+      const noIdName = document.getElementById("noIdName");
+      const noIdContact = document.getElementById("noIdContact");
+      const noIdMsg = document.getElementById("noIdMsg");
+
+      let selectedName = "";
+      let debounceTimer = null;
+
+      nameInput.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(onNameInput, 300);
+      });
+
+      function normalizeSpaces(s) {
+        return (s || "").trim().replace(/\s+/g, " ");
+      }
+
+      // Must contain: word + space + at least 2 chars of next word
+      function phraseReady(text) {
+        text = normalizeSpaces(text);
+        const parts = text.split(" ");
+        if (parts.length < 2) return false;
+        if (parts[0].length < 2) return false;
+        if (parts[1].length < 2) return false;
+        return true;
+      }
+
+      function onNameInput() {
+        hideOpen();
+        setMsg("");
+
+        // clear selection if user edits
+        selectedName = "";
+        selectedBox.style.display = "none";
+        verifyBtn.disabled = true;
+
+        const q = normalizeSpaces(nameInput.value);
+        if (!phraseReady(q)) {
+          suggestBox.style.display = "none";
+          suggestBox.innerHTML = "";
+          noMatchEl.style.display = "none";
+          nameIssueBox.style.display = "none";
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(renderSuggestions)
+          .withFailureHandler(err => setMsg("Error: " + err.message))
+          .searchStudents(q);
+      }
+
+      function renderSuggestions(list) {
+        suggestBox.innerHTML = "";
+        if (!list || list.length === 0) {
+          suggestBox.style.display = "none";
+          noMatchEl.style.display = "block";
+          nameIssueBox.style.display = "block";
+          nameIssueInput.value = normalizeSpaces(nameInput.value);
+          nameIssueMsg.textContent = "";
+          return;
+        }
+        noMatchEl.style.display = "none";
+        nameIssueBox.style.display = "none";
+        list.forEach(item => {
+          const div = document.createElement("div");
+          div.className = "item";
+          div.textContent = item.name; // full name only
+          div.onclick = () => selectName(item.name);
+          suggestBox.appendChild(div);
+        });
+        suggestBox.style.display = "block";
+      }
+
+      function selectName(name) {
+        selectedName = name;
+        selectedNameEl.textContent = name;
+        selectedBox.style.display = "block";
+        suggestBox.style.display = "none";
+        suggestBox.innerHTML = "";
+        noMatchEl.style.display = "none";
+        nameIssueBox.style.display = "none";
+        verifyBtn.disabled = !(selectedName && normalizeSpaces(idInput.value).length > 0);
+        setMsg("");
+      }
+
+      idInput.addEventListener("input", () => {
+        hideOpen();
+        setMsg("");
+        verifyBtn.disabled = !(selectedName && normalizeSpaces(idInput.value).length > 0);
+      });
+
+      function verify() {
+        hideOpen();
+        setMsg("Checking...");
+
+        google.script.run
+          .withSuccessHandler(res => {
+            if (!res || !res.ok) {
+              setMsg(res?.message || "Verification failed.");
+              return;
+            }
+            setMsg("Verified. Slip ready.");
+            fileNameEl.textContent = res.filename || "Enrollment Slip";
+            openLink.href = res.viewUrl;
+            openLink.target = "_blank";
+            openBox.style.display = "block";
+          })
+          .withFailureHandler(err => setMsg("Error: " + err.message))
+          .verifyAndIssueViewToken(selectedName, normalizeSpaces(idInput.value));
+      }
+
+      function resetAll() {
+        nameInput.value = "";
+        idInput.value = "";
+        nameIssueInput.value = "";
+        nameIssueContact.value = "";
+        noIdName.value = "";
+        noIdContact.value = "";
+        selectedName = "";
+        suggestBox.style.display = "none";
+        suggestBox.innerHTML = "";
+        selectedBox.style.display = "none";
+        noMatchEl.style.display = "none";
+        nameIssueBox.style.display = "none";
+        nameIssueMsg.textContent = "";
+        noIdMsg.textContent = "";
+        verifyBtn.disabled = true;
+        hideOpen();
+        setMsg("");
+      }
+
+      function hideOpen() {
+        openBox.style.display = "none";
+        openLink.href = "#";
+        fileNameEl.textContent = "";
+      }
+
+      function setMsg(text) {
+        msgEl.textContent = text || "";
+      }
+
+      function submitNameIssue() {
+        const name = normalizeSpaces(nameIssueInput.value);
+        const contact = normalizeSpaces(nameIssueContact.value);
+
+        if (!name || !contact) {
+          nameIssueMsg.textContent = "Please enter your name and contact info.";
+          return;
+        }
+
+        nameIssueMsg.textContent = "Submitting...";
+        google.script.run
+          .withSuccessHandler(res => {
+            if (!res || !res.ok) {
+              nameIssueMsg.textContent = res?.message || "Submission failed.";
+              return;
+            }
+            nameIssueMsg.textContent = "Submitted. We will contact you.";
+          })
+          .withFailureHandler(err => {
+            nameIssueMsg.textContent = "Error: " + err.message;
+          })
+          .submitIssue("NAME_NOT_FOUND", name, contact);
+      }
+
+      function submitNoId() {
+        const contact = normalizeSpaces(noIdContact.value);
+        const issueType = (noIdType.value || "").trim();
+        const name = selectedName || normalizeSpaces(noIdName.value);
+        if (!name) {
+          noIdMsg.textContent = "Please enter your name.";
+          return;
+        }
+        if (!contact) {
+          noIdMsg.textContent = "Please enter your contact info.";
+          return;
+        }
+
+        noIdMsg.textContent = "Submitting...";
+        google.script.run
+          .withSuccessHandler(res => {
+            if (!res || !res.ok) {
+              noIdMsg.textContent = res?.message || "Submission failed.";
+              return;
+            }
+            noIdMsg.textContent = "Submitted. We will contact you.";
+          })
+          .withFailureHandler(err => {
+            noIdMsg.textContent = "Error: " + err.message;
+          })
+          .submitIssue(issueType, name, contact);
+      }
+    </script>
+  </body>
+</html>

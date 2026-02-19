@@ -2,6 +2,9 @@
 import { getAllRecords, STORES } from "../db/db.js";
 import { importCSVFile } from "./results.js";
 
+const ENROLLMENT_SLIP_LOCKS_KEY = "odlEnrollmentSlipLocks";
+const ENROLLMENT_LOCKED_SLIPS_KEY = "odlEnrollmentLockedSlips";
+
 function escapeCsv(value) {
   const s = String(value ?? "");
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -13,6 +16,42 @@ function appendLog(el, msg) {
   el.textContent += `${msg}\n`;
 }
 
+function readLockPayloads() {
+  let locks = {};
+  let slips = {};
+  try {
+    locks = JSON.parse(localStorage.getItem(ENROLLMENT_SLIP_LOCKS_KEY) || "{}");
+  } catch (_) {
+    locks = {};
+  }
+  try {
+    slips = JSON.parse(localStorage.getItem(ENROLLMENT_LOCKED_SLIPS_KEY) || "{}");
+  } catch (_) {
+    slips = {};
+  }
+
+  const lockMetaById = new Map();
+  for (const [studentId, meta] of Object.entries(locks ?? {})) {
+    const id = String(studentId ?? "").trim();
+    if (!id || !meta || typeof meta !== "object") continue;
+    if (meta.locked !== true) continue;
+    lockMetaById.set(id, {
+      locked: true,
+      lockedAt: String(meta.lockedAt ?? ""),
+      source: String(meta.source ?? ""),
+    });
+  }
+
+  const lockSlipById = new Map();
+  for (const [studentId, slip] of Object.entries(slips ?? {})) {
+    const id = String(studentId ?? "").trim();
+    if (!id || !slip || typeof slip !== "object") continue;
+    lockSlipById.set(id, slip);
+  }
+
+  return { lockMetaById, lockSlipById };
+}
+
 export function buildBackupCsv({ students, courses, results }) {
   const studentMap = new Map(
     students.map((s) => [String(s.studentId ?? "").trim(), s])
@@ -20,6 +59,8 @@ export function buildBackupCsv({ students, courses, results }) {
   const courseMap = new Map(
     courses.map((c) => [String(c.courseCode ?? "").trim(), c])
   );
+  const { lockMetaById, lockSlipById } = readLockPayloads();
+  const lockWritten = new Set();
 
   const header = [
     "ID",
@@ -40,13 +81,38 @@ export function buildBackupCsv({ students, courses, results }) {
     "GradePoints",
     "PassedCourse",
     "CreditsEarned",
+    "SlipLocked",
+    "SlipLockedAt",
+    "SlipLockSource",
+    "SlipSnapshot",
   ];
+
+  const resultStudentIds = new Set(
+    results.map((result) => String(result.studentId ?? "").trim()).filter(Boolean)
+  );
+
+  const buildLockColumns = (studentId) => {
+    const id = String(studentId ?? "").trim();
+    if (!id || lockWritten.has(id)) {
+      return ["", "", "", ""];
+    }
+    const meta = lockMetaById.get(id);
+    const slip = lockSlipById.get(id);
+    if (!meta && !slip) return ["", "", "", ""];
+    lockWritten.add(id);
+    const locked = meta?.locked === true || Boolean(slip);
+    const lockedAt = meta?.lockedAt ?? "";
+    const source = meta?.source ?? "";
+    const slipJson = slip ? JSON.stringify(slip) : "";
+    return [locked ? "TRUE" : "", lockedAt, source, slipJson];
+  };
 
   const rows = results.map((result) => {
     const studentId = String(result.studentId ?? "").trim();
     const courseCode = String(result.courseCode ?? "").trim();
     const student = studentMap.get(studentId) ?? {};
     const course = courseMap.get(courseCode) ?? {};
+    const lockColumns = buildLockColumns(studentId);
 
     return [
       studentId,
@@ -67,10 +133,45 @@ export function buildBackupCsv({ students, courses, results }) {
       result.gradePoints ?? "",
       result.passedCourse ?? "",
       result.creditsEarned ?? "",
+      ...lockColumns,
     ].map(escapeCsv);
   });
 
-  return [header.map(escapeCsv).join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const studentOnlyRows = students
+    .filter((student) => {
+      const id = String(student?.studentId ?? "").trim();
+      return id && !resultStudentIds.has(id);
+    })
+    .map((student) => {
+      const lockColumns = buildLockColumns(student.studentId);
+      return [
+        String(student.studentId ?? "").trim(),
+        student.name ?? "",
+        student.ic ?? "",
+        student.intake ?? "",
+        student.intakeYear ?? "",
+        student.intakeMonth ?? "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ...lockColumns,
+      ].map(escapeCsv);
+    });
+
+  return [
+    header.map(escapeCsv).join(","),
+    ...rows.map((r) => r.join(",")),
+    ...studentOnlyRows.map((r) => r.join(",")),
+  ].join("\n");
 }
 
 export function initBackup({ onDataChanged } = {}) {
