@@ -848,6 +848,15 @@
         display: none;
       }
 
+      .app-footer {
+        margin-top: 40px;
+        padding: 18px 0 6px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+      }
+
       @media (max-width: 720px) {
         .enrollment-custom-list {
           grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -1981,6 +1990,11 @@
               <thead id="reportPreviewHead"></thead>
               <tbody id="reportPreviewBody"></tbody>
             </table>
+            <div class="form-actions" id="reportPager" style="display: none; margin-top: 12px;">
+              <button class="btn secondary small" type="button" id="btnReportPrev">Previous</button>
+              <span class="muted" id="reportPageMeta">Page 1 of 1</span>
+              <button class="btn secondary small" type="button" id="btnReportNext">Next</button>
+            </div>
           </div>
         </div>
       </section>
@@ -2372,5 +2386,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script type="module" src="./app/main.js"></script>
+    <footer class="app-footer">Copyright MFR 2026</footer>
   </body>
 </html>
